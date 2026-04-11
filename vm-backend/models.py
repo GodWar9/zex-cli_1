@@ -1,38 +1,14 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Any, Dict
 
-
-class ExecutionEventModel(BaseModel):
-    instruction_index: int
-    pc: int
-    opcode_name: str
-    operand: Optional[int] = None
-    stack: list[int]
-    registers: list[int]
+class SimulatedStep(BaseModel):
+    step_index: int
+    line_number: Optional[int] = None
+    source_line: Optional[str] = None
+    variables: Dict[str, Any] = {}
     output: Optional[str] = None
-    error: Optional[str] = None
-    halted: bool
+    intent: Optional[str] = None
+    warning: Optional[str] = None
 
-
-class NarrationEvent(BaseModel):
-    instruction_index: int
-    narration_type: str   # "intent" | "step" | "prediction" | "warning" | "error"
-    text: str
-
-    def to_dict(self):
-        return {
-            "instruction_index": self.instruction_index,
-            "narration_type": self.narration_type,
-            "text": self.text,
-        }
-
-
-class ProgramInfo(BaseModel):
-    name: str
-    filename: str
-    description: str
-
-
-class RunRequest(BaseModel):
-    program: Optional[str] = None
-    bytecode: Optional[list[int]] = None
+class SimulationRequest(BaseModel):
+    code: str
