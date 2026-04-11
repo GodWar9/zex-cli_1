@@ -91,7 +91,7 @@ export function useScheduler(): UseSchedulerReturn {
     setConnectionStatus('connecting');
 
     // Make sure server is listening on 8001 for scheduler
-    const ws = new WebSocket('ws://localhost:8001/ws/scheduler');
+    const ws = new WebSocket('ws://localhost:8000/ws/scheduler');
     wsRef.current = ws;
 
     ws.onopen = () => setConnectionStatus('connected');

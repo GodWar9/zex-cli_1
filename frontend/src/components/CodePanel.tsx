@@ -79,7 +79,7 @@ export function CodePanel({ code, onChange, onRun, status, currentLine }: CodePa
           <Editor
             value={code}
             onValueChange={onChange}
-            highlight={(code) => Prism.highlight(code, Prism.languages.python, 'python')}
+            highlight={(code: string) => Prism.highlight(code, Prism.languages.python, 'python')}
             padding={16}
             style={{
               fontFamily: '"Fira code", "Fira Mono", monospace',
