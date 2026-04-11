@@ -116,18 +116,18 @@ export function Window({
         style={{
           height: 32,
           minHeight: 32,
-          background: 'linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%)',
+          background: 'rgba(30, 30, 30, 0.4)',
+          backdropFilter: 'blur(20px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
           cursor: isMax ? 'default' : 'grab',
           userSelect: 'none',
-          borderBottom: '1px solid rgba(0,0,0,0.4)',
+          borderBottom: '1px solid rgba(0,0,0,0.3)',
         }}
       >
-        {/* Traffic Lights */}
-        <div style={{
+        <div className="traffic-lights" style={{
           position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
           display: 'flex', gap: 7,
         }}>
@@ -136,7 +136,7 @@ export function Window({
             className="traffic-btn traffic-close"
             title="Close"
           >
-            <svg width="6" height="6" viewBox="0 0 6 6" style={{ opacity: 0 }}>
+            <svg width="6" height="6" viewBox="0 0 6 6" className="traffic-icon">
               <path d="M0 0L6 6M6 0L0 6" stroke="rgba(0,0,0,0.6)" strokeWidth="1.2" />
             </svg>
           </button>
@@ -145,7 +145,7 @@ export function Window({
             className="traffic-btn traffic-minimize"
             title="Minimize"
           >
-            <svg width="6" height="1" viewBox="0 0 6 1" style={{ opacity: 0 }}>
+            <svg width="6" height="1" viewBox="0 0 6 1" className="traffic-icon">
               <path d="M0 0.5H6" stroke="rgba(0,0,0,0.6)" strokeWidth="1.2" />
             </svg>
           </button>
@@ -154,8 +154,9 @@ export function Window({
             className="traffic-btn traffic-maximize"
             title="Full Screen"
           >
-            <svg width="6" height="6" viewBox="0 0 6 6" style={{ opacity: 0 }}>
-              <path d="M0 6V1.5C0 0.67 0.67 0 1.5 0H6L0 6ZM6 0V4.5C6 5.33 5.33 6 4.5 6H0L6 0Z" fill="rgba(0,0,0,0.6)" />
+            <svg width="6" height="6" viewBox="0 0 6 6" className="traffic-icon">
+              <path d="M1 1H5V5H1V1Z" fill="rgba(0,0,0,0.6)" />
+              <path d="M5.5 0.5L0.5 5.5" stroke="rgba(0,0,0,0.6)" strokeWidth="1" />
             </svg>
           </button>
         </div>

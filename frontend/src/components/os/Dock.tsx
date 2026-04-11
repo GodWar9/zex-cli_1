@@ -52,14 +52,14 @@ export function Dock({ apps, onLaunch, isOpen }: DockProps) {
         style={{
           display: 'flex',
           alignItems: 'flex-end',
-          gap: 4,
-          padding: '6px 10px 5px',
-          background: 'rgba(40, 40, 42, 0.65)',
-          backdropFilter: 'blur(30px) saturate(150%)',
-          WebkitBackdropFilter: 'blur(30px) saturate(150%)',
-          borderRadius: 16,
-          border: '1px solid rgba(255,255,255,0.12)',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
+          gap: 32,
+          padding: '12px 100px 10px',
+          background: 'rgba(255, 255, 255, 0.25)',
+          backdropFilter: 'blur(50px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+          borderRadius: 22,
+          border: '1px solid rgba(255,255,255,0.3)',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.4)',
         }}
       >
         {apps.map((app, index) => {

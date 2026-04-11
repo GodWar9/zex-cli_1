@@ -37,6 +37,8 @@ from scheduler.scheduler_sim import SchedulerSim
 from shell.shell_handler import handle_shell_command
 from sentinel.sentinel import analyze_system
 from shared.state import system_state
+from scenario.generator import generate_scenario, generate_debrief
+
 
 
 # ---------------------------------------------------------------------------
@@ -245,6 +247,26 @@ async def system_metrics():
 @app.get("/system/alerts")
 async def system_alerts():
     return {"alerts": system_state.get_alerts()}
+
+
+# ---------------------------------------------------------------------------
+# REST — /api/scenario/*
+# ---------------------------------------------------------------------------
+
+@app.post("/api/scenario/generate")
+async def generate_scenario_endpoint():
+    scenario = generate_scenario()
+    return scenario
+
+class DebriefRequest(BaseModel):
+    log: list
+    vulnerabilities: list
+
+@app.post("/api/scenario/debrief")
+async def generate_debrief_endpoint(req: DebriefRequest):
+    debrief = generate_debrief(req.log, req.vulnerabilities)
+    return {"debrief": debrief}
+
 
 
 # ---------------------------------------------------------------------------

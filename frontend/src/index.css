@@ -792,7 +792,43 @@ hr,
 
 /* TAILWIND OVERRIDES REMOVED */
 
+/* ─── MAC OS WINDOW CONTROLS ────────────────────────────── */
+.traffic-btn {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+  transition: background 0.15s;
+}
+
+.traffic-btn svg {
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.traffic-lights:hover .traffic-btn svg,
+.traffic-btn:hover svg {
+  opacity: 1;
+}
+
+.traffic-close { background: #ff5f56; }
+.traffic-close:active { background: #bf4942; }
+
+.traffic-minimize { background: #ffbd2e; }
+.traffic-minimize:active { background: #bf8e22; }
+
+.traffic-maximize { background: #27c93f; }
+.traffic-maximize:active { background: #1d9730; }
+
 /* ─── OS SHELL & APPS ANIMATIONS ────────────────────────────── */
+
 
 @keyframes shellPulse {
   0%, 100% { transform: scale(0.8); opacity: 0.3; }
