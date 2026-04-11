@@ -1,1 +1,878 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+/* ─── RESET ─────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── CSS VARIABLES ─────────────────────────────────────────── */
+:root {
+  --bg-base:       #000000;
+  --bg-surface:    #060606;
+  --bg-panel:      #0a0a0a;
+  --bg-elevated:   #0f0f0f;
+  --bg-highlight:  #141414;
+
+  --cyan:          #00FFD1;
+  --cyan-dim:      rgba(0, 255, 209, 0.15);
+  --cyan-border:   rgba(0, 255, 209, 0.25);
+  --cyan-glow:     0 0 12px rgba(0, 255, 209, 0.5), 0 0 40px rgba(0, 255, 209, 0.15);
+  --cyan-glow-sm:  0 0 6px rgba(0, 255, 209, 0.4);
+
+  --amber:         #FFB800;
+  --amber-dim:     rgba(255, 184, 0, 0.12);
+  --amber-border:  rgba(255, 184, 0, 0.35);
+  --amber-glow:    0 0 10px rgba(255, 184, 0, 0.6), 0 0 30px rgba(255, 184, 0, 0.2);
+
+  --red:           #FF3B3B;
+  --red-dim:       rgba(255, 59, 59, 0.12);
+  --red-glow:      0 0 10px rgba(255, 59, 59, 0.5);
+
+  --green:         #00FF88;
+  --green-dim:     rgba(0, 255, 136, 0.1);
+  --green-glow:    0 0 8px rgba(0, 255, 136, 0.4);
+
+  --purple:        #A855F7;
+  --purple-dim:    rgba(168, 85, 247, 0.12);
+
+  --text-primary:  #E0FFF8;
+  --text-secondary:#4DCCB0;
+  --text-dim:      #1A4A3A;
+  --text-muted:    #2A6A58;
+
+  --border:        rgba(0, 255, 209, 0.08);
+  --border-md:     rgba(0, 255, 209, 0.18);
+  --border-bright: rgba(0, 255, 209, 0.35);
+}
+
+/* ─── ROOT ──────────────────────────────────────────────────── */
+html, body, #root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Space Mono', monospace;
+}
+
+/* dot grid background */
+body {
+  background-image:
+    radial-gradient(circle, rgba(0, 255, 209, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+  animation: gridDrift 60s linear infinite;
+}
+
+@keyframes gridDrift {
+  0%   { background-position: 0 0; }
+  100% { background-position: 28px 28px; }
+}
+
+/* scanline overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* vignette */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.7) 100%);
+  pointer-events: none;
+  z-index: 9997;
+}
+
+/* ─── SCROLLBARS ────────────────────────────────────────────── */
+::-webkit-scrollbar            { width: 3px; height: 3px; }
+::-webkit-scrollbar-track      { background: var(--bg-base); }
+::-webkit-scrollbar-thumb      { background: var(--cyan-border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover{ background: var(--cyan); }
+
+/* ─── KEYFRAMES ─────────────────────────────────────────────── */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes pulseRing {
+  0%   { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
+  70%  { box-shadow: 0 0 0 8px rgba(0, 255, 136, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
+}
+
+@keyframes pulseAmber {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 184, 0, 0.7); }
+  70%  { box-shadow: 0 0 0 8px rgba(255, 184, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 184, 0, 0); }
+}
+
+@keyframes slideInUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes slideInDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+  20%, 24%, 55%                           { opacity: 0.6; }
+}
+
+@keyframes scanSweep {
+  0%   { top: -2px; opacity: 0.6; }
+  90%  { opacity: 0.6; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes borderGlow {
+  0%, 100% { border-color: var(--cyan-border); }
+  50%       { border-color: rgba(0, 255, 209, 0.5); box-shadow: var(--cyan-glow); }
+}
+
+@keyframes amberPulseText {
+  0%, 100% { text-shadow: 0 0 8px rgba(255, 184, 0, 0.6); }
+  50%       { text-shadow: 0 0 20px rgba(255, 184, 0, 1), 0 0 40px rgba(255, 184, 0, 0.4); }
+}
+
+@keyframes dataFlicker {
+  0%,100% { opacity: 1; }
+  92%     { opacity: 1; }
+  93%     { opacity: 0.4; }
+  94%     { opacity: 1; }
+  97%     { opacity: 1; }
+  98%     { opacity: 0.6; }
+  99%     { opacity: 1; }
+}
+
+@keyframes cornerBlink {
+  0%, 80%, 100% { opacity: 0.3; }
+  85%           { opacity: 1; }
+}
+
+@keyframes rowHighlight {
+  0%   { background: rgba(255, 184, 0, 0.25); }
+  100% { background: rgba(255, 184, 0, 0.06); }
+}
+
+/* ─── STATUS BAR ────────────────────────────────────────────── */
+.status-bar,
+[class*="StatusBar"],
+header {
+  background: var(--bg-surface) !important;
+  border-bottom: 1px solid var(--border-md) !important;
+  box-shadow:
+    0 1px 0 rgba(0, 255, 209, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.8),
+    0 4px 24px rgba(0, 0, 0, 0.8) !important;
+  animation: slideInDown 0.4s ease both;
+  position: relative;
+}
+
+/* top accent line on statusbar */
+.status-bar::after,
+[class*="StatusBar"]::after,
+header::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--cyan) 20%,
+    rgba(0, 255, 209, 0.4) 50%,
+    var(--cyan) 80%,
+    transparent 100%
+  );
+  animation: flicker 6s ease-in-out infinite;
+}
+
+/* metric labels in statusbar */
+.status-bar span,
+[class*="StatusBar"] span {
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+/* IDLE state */
+.status-bar [class*="idle"],
+.status-bar [class*="IDLE"] {
+  color: var(--text-muted) !important;
+  letter-spacing: 0.1em;
+}
+
+/* RUNNING state */
+.status-bar [class*="running"],
+.status-bar [class*="RUNNING"] {
+  color: var(--green) !important;
+  text-shadow: var(--green-glow);
+  animation: flicker 2s ease-in-out infinite;
+}
+
+/* ERROR state */
+.status-bar [class*="error"],
+.status-bar [class*="ERROR"] {
+  color: var(--red) !important;
+  text-shadow: var(--red-glow);
+  animation: flicker 0.5s ease-in-out infinite;
+}
+
+/* opcode value - big cyan number */
+.status-bar [class*="opcode"] + *,
+.status-bar [class*="value"],
+.status-bar code {
+  color: var(--cyan) !important;
+  text-shadow: var(--cyan-glow-sm);
+  animation: dataFlicker 8s ease-in-out infinite;
+}
+
+/* connection dot */
+[class*="connection"],
+[class*="Connection"],
+[class*="status-dot"] {
+  animation: pulseRing 1.5s ease infinite !important;
+}
+
+/* ─── PANEL HEADERS ─────────────────────────────────────────── */
+[class*="panel-header"],
+[class*="PanelHeader"],
+[class*="header"]:not(header) {
+  background: var(--bg-surface) !important;
+  border-bottom: 1px solid var(--border-md) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+[class*="panel-header"]::before,
+[class*="PanelHeader"]::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    var(--cyan-border),
+    transparent
+  );
+}
+
+/* BYTECODE label */
+[class*="bytecode"] > [class*="header"] > span:first-child,
+[class*="BytecodePanel"] > [class*="header"] > span:first-child {
+  color: var(--cyan) !important;
+  text-shadow: var(--cyan-glow-sm);
+  letter-spacing: 0.2em;
+  animation: flicker 8s ease infinite;
+}
+
+/* STACK label */
+[class*="stack"] > [class*="header"] > span:first-child,
+[class*="StackVisualiser"] [class*="header"] span:first-child,
+[class*="StackPanel"] [class*="header"] span:first-child {
+  color: var(--cyan) !important;
+  text-shadow: var(--cyan-glow-sm);
+  letter-spacing: 0.2em;
+}
+
+/* AI NARRATION label */
+[class*="narration"] > [class*="header"] > span:first-child,
+[class*="NarrationPanel"] [class*="header"] span:first-child {
+  color: var(--cyan) !important;
+  text-shadow: var(--cyan-glow-sm);
+  letter-spacing: 0.2em;
+  animation: flicker 10s ease infinite;
+}
+
+/* badge pills (ops count, token count, depth) */
+[class*="badge"],
+[class*="Badge"],
+[class*="pill"],
+[class*="Pill"] {
+  background: var(--cyan-dim) !important;
+  border: 1px solid var(--cyan-border) !important;
+  color: var(--cyan) !important;
+  font-family: 'Space Mono', monospace !important;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+}
+
+[class*="badge"]:hover,
+[class*="Badge"]:hover {
+  background: rgba(0, 255, 209, 0.2) !important;
+  box-shadow: var(--cyan-glow-sm);
+}
+
+/* ─── PANELS ────────────────────────────────────────────────── */
+[class*="BytecodePanel"],
+[class*="StackVisualiser"],
+[class*="StackPanel"],
+[class*="NarrationPanel"] {
+  background: var(--bg-panel) !important;
+  border-color: var(--border-md) !important;
+  position: relative;
+  animation: fadeIn 0.5s ease both;
+}
+
+/* center divider glow */
+[class*="divider"],
+.border-r,
+[class*="split"] {
+  border-color: var(--border-md) !important;
+  box-shadow: 1px 0 16px rgba(0, 255, 209, 0.08) !important;
+}
+
+/* ─── BYTECODE ROWS ─────────────────────────────────────────── */
+[class*="instruction-row"],
+[class*="InstructionRow"],
+[class*="bytecode-row"] {
+  transition: background 0.15s ease, border-left-color 0.15s ease !important;
+  border-left: 2px solid transparent !important;
+}
+
+[class*="instruction-row"]:hover,
+[class*="InstructionRow"]:hover,
+[class*="bytecode-row"]:hover {
+  background: rgba(0, 255, 209, 0.04) !important;
+  border-left-color: var(--cyan-border) !important;
+  cursor: pointer;
+}
+
+/* active/highlighted row */
+[class*="active"],
+[class*="current"],
+[class*="executing"] {
+  background: rgba(255, 184, 0, 0.07) !important;
+  border-left: 2px solid var(--amber) !important;
+  animation: rowHighlight 0.4s ease both !important;
+  position: relative;
+}
+
+[class*="active"]::before,
+[class*="current"]::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--amber);
+  box-shadow: var(--amber-glow);
+}
+
+/* active opcode text */
+[class*="active"] [class*="opcode"],
+[class*="current"] [class*="opcode"],
+[class*="active"] code,
+[class*="current"] code {
+  color: var(--amber) !important;
+  text-shadow: 0 0 8px rgba(255, 184, 0, 0.8) !important;
+  animation: amberPulseText 2s ease-in-out infinite !important;
+}
+
+/* offset hex labels */
+[class*="offset"],
+[class*="Offset"],
+[class*="hex"] {
+  color: var(--text-dim) !important;
+  font-size: 10px;
+  transition: color 0.2s ease;
+}
+
+[class*="instruction-row"]:hover [class*="offset"] {
+  color: var(--text-muted) !important;
+}
+
+/* active row arrow indicator */
+[class*="active"] [class*="arrow"],
+[class*="current"] [class*="arrow"],
+[class*="arrow-indicator"] {
+  color: var(--amber) !important;
+  text-shadow: var(--amber-glow);
+  animation: blink 0.8s step-end infinite !important;
+}
+
+/* dotted separators */
+[class*="separator"],
+[class*="dotted"] {
+  border-color: rgba(0, 255, 209, 0.06) !important;
+}
+
+/* ─── STACK VISUALISER ──────────────────────────────────────── */
+[class*="stack-frame"],
+[class*="StackFrame"],
+[class*="frame-block"] {
+  border-radius: 2px !important;
+  transition: all 0.2s ease !important;
+  animation: slideInUp 0.25s ease both;
+  position: relative;
+  overflow: hidden;
+}
+
+/* frame type colours */
+[class*="type-int"],
+[class*="frame-int"],
+[data-type="int"] {
+  border-color: var(--cyan) !important;
+  background: var(--cyan-dim) !important;
+  box-shadow: inset 0 0 8px rgba(0, 255, 209, 0.05) !important;
+}
+[class*="type-int"]:hover  { box-shadow: var(--cyan-glow-sm) !important; }
+
+[class*="type-str"],
+[class*="frame-str"],
+[data-type="str"] {
+  border-color: var(--green) !important;
+  background: var(--green-dim) !important;
+}
+
+[class*="type-ref"],
+[class*="frame-ref"],
+[data-type="ref"] {
+  border-color: var(--purple) !important;
+  background: var(--purple-dim) !important;
+}
+
+[class*="type-bool"],
+[class*="frame-bool"],
+[data-type="bool"] {
+  border-color: var(--amber) !important;
+  background: var(--amber-dim) !important;
+}
+
+/* frame shimmer on hover */
+[class*="stack-frame"]::after,
+[class*="StackFrame"]::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+  transition: left 0.4s ease;
+}
+[class*="stack-frame"]:hover::after,
+[class*="StackFrame"]:hover::after {
+  left: 150%;
+}
+
+/* stack depth meter */
+[class*="depth-meter"],
+[class*="DepthMeter"],
+[class*="stack-meter"] {
+  background: rgba(0, 255, 209, 0.05) !important;
+}
+[class*="depth-meter"] [class*="fill"],
+[class*="depth-fill"] {
+  background: var(--cyan) !important;
+  box-shadow: 0 0 6px rgba(0, 255, 209, 0.5) !important;
+  transition: height 0.3s ease !important;
+}
+
+/* empty stack state */
+[class*="stack-empty"],
+[class*="empty-state"] {
+  color: var(--text-dim) !important;
+  animation: fadeIn 0.5s ease, flicker 6s 2s ease-in-out infinite !important;
+}
+
+/* ─── NARRATION PANEL ───────────────────────────────────────── */
+[class*="narration-body"],
+[class*="NarrationBody"],
+[class*="narration-scroll"] {
+  background: var(--bg-panel) !important;
+  position: relative;
+}
+
+/* scan sweep inside narration */
+[class*="narration-body"]::before,
+[class*="NarrationBody"]::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,255,209,0.2), transparent);
+  animation: scanSweep 5s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* token colours */
+[class*="tag-intent"],
+[data-tag="intent"],
+[class*="token-intent"] {
+  color: #60A5FA !important;
+  text-shadow: 0 0 6px rgba(96, 165, 250, 0.5) !important;
+}
+
+[class*="tag-step"],
+[data-tag="step"],
+[class*="token-step"] {
+  color: var(--text-secondary) !important;
+}
+
+[class*="tag-warning"],
+[data-tag="warning"],
+[class*="token-warning"] {
+  color: var(--amber) !important;
+  text-shadow: 0 0 6px rgba(255, 184, 0, 0.5) !important;
+}
+
+[class*="tag-error"],
+[data-tag="error"],
+[class*="token-error"] {
+  color: var(--red) !important;
+  text-shadow: 0 0 8px rgba(255, 59, 59, 0.6) !important;
+  animation: flicker 0.4s ease-in-out infinite !important;
+}
+
+[class*="tag-plain"],
+[data-tag="plain"],
+[class*="token-plain"] {
+  color: var(--text-primary) !important;
+}
+
+/* streaming cursor */
+[class*="cursor"],
+[class*="stream-cursor"] {
+  background: var(--text-secondary) !important;
+  animation: blink 1s step-end infinite !important;
+  box-shadow: 0 0 4px rgba(0, 255, 209, 0.4);
+}
+
+/* tag legend pills */
+[class*="legend"],
+[class*="Legend"],
+[class*="tag-legend"] {
+  border-bottom: 1px solid var(--border) !important;
+  padding-bottom: 10px !important;
+}
+
+[class*="legend-pill"],
+[class*="LegendPill"] {
+  font-size: 9px !important;
+  letter-spacing: 0.15em;
+  transition: opacity 0.2s ease;
+}
+[class*="legend-pill"]:hover,
+[class*="LegendPill"]:hover { opacity: 1 !important; }
+
+/* empty narration state */
+[class*="narration-empty"],
+[class*="awaiting"] {
+  color: var(--text-dim) !important;
+  animation: fadeIn 0.5s ease, flicker 4s 1s ease-in-out infinite !important;
+}
+
+/* ─── CONTROLS BAR ──────────────────────────────────────────── */
+[class*="Controls"],
+[class*="controls-bar"],
+footer {
+  background: var(--bg-surface) !important;
+  border-top: 1px solid var(--border-md) !important;
+  box-shadow:
+    0 -1px 0 rgba(0, 255, 209, 0.1),
+    0 -4px 24px rgba(0, 0, 0, 0.8) !important;
+  position: relative;
+}
+
+[class*="Controls"]::before,
+footer::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 255, 209, 0.3) 30%,
+    rgba(0, 255, 209, 0.1) 70%,
+    transparent 100%
+  );
+}
+
+/* program label */
+[class*="program-label"],
+[class*="ProgramLabel"] {
+  color: var(--text-dim) !important;
+  letter-spacing: 0.2em;
+  font-size: 9px !important;
+}
+
+/* program dropdown */
+select,
+[class*="program-select"],
+[class*="ProgramSelect"] {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-md) !important;
+  color: var(--text-primary) !important;
+  font-family: 'Space Mono', monospace !important;
+  font-size: 12px !important;
+  border-radius: 2px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer;
+}
+
+select:hover,
+[class*="program-select"]:hover {
+  border-color: var(--cyan) !important;
+  box-shadow: 0 0 8px rgba(0, 255, 209, 0.2) !important;
+  background: var(--bg-highlight) !important;
+}
+
+select:focus,
+[class*="program-select"]:focus {
+  outline: none !important;
+  border-color: var(--cyan) !important;
+  box-shadow: 0 0 0 1px var(--cyan), var(--cyan-glow) !important;
+}
+
+select option {
+  background: var(--bg-panel) !important;
+  color: var(--text-primary) !important;
+}
+
+/* ─── BUTTONS ───────────────────────────────────────────────── */
+button,
+[class*="btn"],
+[class*="Btn"],
+[role="button"] {
+  font-family: 'Space Mono', monospace !important;
+  font-size: 11px !important;
+  letter-spacing: 0.12em !important;
+  border-radius: 2px !important;
+  cursor: pointer !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: all 0.15s ease !important;
+  text-transform: uppercase !important;
+}
+
+/* button shimmer on hover */
+button::after,
+[class*="btn"]::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 0; left: -100%; width: 70%; height: 100% !important;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent) !important;
+  transition: left 0.3s ease !important;
+}
+button:hover::after,
+[class*="btn"]:hover::after {
+  left: 150% !important;
+}
+
+/* RUN button */
+[class*="btn-run"],
+[class*="RunButton"],
+button[class*="run"],
+button:has([class*="run"]) {
+  border: 1px solid var(--cyan-border) !important;
+  color: var(--cyan) !important;
+  background: transparent !important;
+}
+[class*="btn-run"]:hover,
+button[class*="run"]:hover {
+  background: var(--cyan-dim) !important;
+  border-color: var(--cyan) !important;
+  box-shadow: var(--cyan-glow) !important;
+  transform: translateY(-1px) !important;
+}
+[class*="btn-run"]:active,
+button[class*="run"]:active {
+  transform: translateY(0) scale(0.98) !important;
+}
+
+/* running state */
+[class*="running"] [class*="btn-run"],
+[class*="state-running"] button {
+  animation: borderGlow 1.5s ease-in-out infinite !important;
+}
+
+/* STEP button */
+[class*="btn-step"],
+[class*="StepButton"],
+button[class*="step"] {
+  border: 1px solid var(--amber-border) !important;
+  color: var(--amber) !important;
+  background: transparent !important;
+}
+[class*="btn-step"]:hover,
+button[class*="step"]:hover {
+  background: var(--amber-dim) !important;
+  border-color: var(--amber) !important;
+  box-shadow: var(--amber-glow) !important;
+  transform: translateY(-1px) !important;
+}
+[class*="btn-step"]:disabled,
+button[class*="step"]:disabled {
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* RESET button */
+[class*="btn-reset"],
+[class*="ResetButton"],
+button[class*="reset"] {
+  border: 1px solid var(--text-dim) !important;
+  color: var(--text-muted) !important;
+  background: transparent !important;
+}
+[class*="btn-reset"]:hover,
+button[class*="reset"]:hover {
+  border-color: var(--red) !important;
+  color: var(--red) !important;
+  box-shadow: var(--red-glow) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ─── CORNERS / DECORATIVE ──────────────────────────────────── */
+/* corner bracket decoration on panels */
+[class*="BytecodePanel"] > div:first-child::before,
+[class*="NarrationPanel"] > div:first-child::before {
+  content: '';
+  position: absolute;
+  top: 4px; left: 4px;
+  width: 8px; height: 8px;
+  border-top: 1px solid var(--cyan-border);
+  border-left: 1px solid var(--cyan-border);
+  animation: cornerBlink 4s ease-in-out infinite;
+}
+
+[class*="BytecodePanel"] > div:first-child::after,
+[class*="NarrationPanel"] > div:first-child::after {
+  content: '';
+  position: absolute;
+  bottom: 4px; right: 4px;
+  width: 8px; height: 8px;
+  border-bottom: 1px solid var(--cyan-border);
+  border-right: 1px solid var(--cyan-border);
+  animation: cornerBlink 4s 2s ease-in-out infinite;
+}
+
+/* ─── BRAND / LOGO ──────────────────────────────────────────── */
+[class*="brand"],
+[class*="Brand"],
+[class*="logo"],
+[class*="Logo"] {
+  animation: flicker 12s ease-in-out infinite;
+}
+
+[class*="brand"] span,
+[class*="Brand"] span,
+[class*="logo-text"],
+[class*="LogoText"] {
+  color: var(--cyan) !important;
+  text-shadow: var(--cyan-glow-sm) !important;
+  letter-spacing: 0.15em;
+}
+
+/* ─── DIVIDERS ──────────────────────────────────────────────── */
+hr,
+[class*="divider"],
+[class*="Divider"] {
+  border-color: var(--border) !important;
+}
+
+/* ─── MISC TEXT ─────────────────────────────────────────────── */
+[class*="label"],
+[class*="Label"] {
+  color: var(--text-dim) !important;
+  letter-spacing: 0.15em;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+[class*="value"],
+[class*="Value"],
+[class*="count"],
+[class*="Count"] {
+  color: var(--text-primary) !important;
+  font-family: 'Space Mono', monospace;
+  animation: dataFlicker 10s ease-in-out infinite;
+}
+
+/* latency ticker */
+[class*="latency"],
+[class*="Latency"],
+[class*="timer"],
+[class*="Timer"] {
+  color: var(--text-dim) !important;
+  font-family: 'Space Mono', monospace !important;
+  font-size: 10px !important;
+  animation: dataFlicker 3s ease-in-out infinite;
+}
+
+/* no program / empty state */
+[class*="no-program"],
+[class*="NoProgram"],
+[class*="empty"] {
+  color: var(--text-dim) !important;
+  border-color: var(--border) !important;
+  animation: flicker 5s ease-in-out infinite !important;
+}
+
+/* ─── TAILWIND OVERRIDES ────────────────────────────────────── */
+.bg-\[#020408\],
+.bg-\[#060d14\],
+.bg-\[#0a1520\],
+.bg-\[#0f1e2e\] {
+  background-color: var(--bg-base) !important;
+}
+
+.border-\[rgba\(32\,140\,200\,0\.15\)\],
+.border-\[rgba\(32\,140\,200\,0\.35\)\] {
+  border-color: var(--border-md) !important;
+}
+
+.text-\[\#C8E0F0\] { color: var(--text-primary) !important; }
+.text-\[\#5A8AAA\] { color: var(--text-secondary) !important; }
+.text-\[\#2A4A6A\] { color: var(--text-dim) !important; }
+
+.text-\[\#208CC8\],
+.text-\[\#1DB885\] {
+  color: var(--cyan) !important;
+  text-shadow: var(--cyan-glow-sm);
+}
+
+.text-\[\#E8A020\] {
+  color: var(--amber) !important;
+  text-shadow: 0 0 6px rgba(255,184,0,0.5);
+}
+
+.text-\[\#E84040\] {
+  color: var(--red) !important;
+  text-shadow: 0 0 6px rgba(255,59,59,0.4);
+}
+
+/* global bg overrides */
+.bg-vm-base    { background: var(--bg-base) !important; }
+.bg-vm-surface { background: var(--bg-surface) !important; }
+.bg-vm-panel   { background: var(--bg-panel) !important; }
+
+/* border overrides */
+.border-vm { border-color: var(--border-md) !important; }
+
+/* cyan text */
+.text-vm-blue,
+.text-vm-teal,
+.text-\[\#208CC8\] {
+  color: var(--cyan) !important;
+  text-shadow: var(--cyan-glow-sm);
+}
