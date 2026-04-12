@@ -139,4 +139,10 @@ export class KeyPool {
   get totalKeys(): number {
     return this.entries.length;
   }
+
+  /** Returns 1-based index of the given key in the pool. */
+  getKeyIndex(key: string): number {
+    const idx = this.entries.findIndex((e) => e.key === key);
+    return idx === -1 ? 0 : idx + 1;
+  }
 }

@@ -64,15 +64,6 @@ export default function ChatScreen() {
           timestamp: new Date(),
         });
       }
-
-      setMessages(prev => [
-        ...prev,
-        {
-          id: nextId(),
-          role: 'system',
-          content: `🔍 [Security Audit] Tech: ${context.framework} | Auth: ${context.hasAuth ? 'Yes' : 'No'} | DB: ${context.hasDatabase ? 'Yes' : 'No'}\n${context.existingFindings.length > 0 ? `⚠ Found ${context.existingFindings.length} pre-existing security concerns (run /security to view).` : '✅ No immediate security concerns found.'}`
-        }
-      ]);
     }
 
     runAudit();

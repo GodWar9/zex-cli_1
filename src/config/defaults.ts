@@ -17,20 +17,18 @@ interface ProviderDefault {
  * Falls back to ollama (local, no key required).
  */
 export function detectProvider(): ProviderDefault {
+  // Priority: Gemini first (optimized for zex context/security features)
+  if (process.env['GEMINI_API_KEY'] || process.env['GOOGLE_API_KEY'] || process.env['GEMINI_API_KEYS']) {
+    return { provider: 'gemini', model: 'gemini-2.5-flash' };
+  }
   if (process.env['ANTHROPIC_API_KEY']) {
-    return { provider: 'anthropic', model: 'claude-sonnet-4-5' };
+    return { provider: 'anthropic', model: 'claude-3-5-sonnet-latest' };
   }
   if (process.env['OPENAI_API_KEY']) {
     return { provider: 'openai', model: 'gpt-4o' };
   }
-  if (process.env['GEMINI_API_KEY'] || process.env['GOOGLE_API_KEY']) {
-    return { provider: 'gemini', model: 'gemini-2.0-flash' };
-  }
-  if (process.env['OPENROUTER_API_KEY']) {
-    return { provider: 'openrouter', model: 'anthropic/claude-sonnet-4-5' };
-  }
-  // Default: ollama running locally (no key required)
-  return { provider: 'ollama', model: 'llama3.2' };
+  // Fallback to gemini-2.0-flash as the intended standard model
+  return { provider: 'gemini', model: 'gemini-2.0-flash' };
 }
 
 export const DEFAULT_MAX_TOKENS = 8192;

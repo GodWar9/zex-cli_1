@@ -48,7 +48,7 @@ function convertToolsToGemini() {
   return geminiTools.length > 0 ? [{ functionDeclarations: geminiTools }] : undefined;
 }
 
-const DEFAULT_MODEL = 'gemini-2.5-flash';
+const DEFAULT_MODEL = 'gemini-2.0-flash';
 const DEFAULT_MAX_TOKENS = 8192;
 
 // ─── Per-provider singleton pool ──────────────────────────────────────────────
@@ -215,13 +215,13 @@ export class GeminiProvider implements LLMProvider {
 
       // 429 = quota exhausted → rotate key and signal retry
       if (error.status === 429) {
-        const maskedKey = KeyPool.maskKey(apiKey);
+        const keyIdx = pool.getKeyIndex(apiKey);
         const nextKey = pool.markExhausted(apiKey);
         if (nextKey) {
           // Signal the runner to retry this exact turn with the new key
           yield {
             type: 'error',
-            message: `Key ${maskedKey} quota reached — switching to next key (${pool.summaryLine()}). Retrying…`,
+            message: `Key ${keyIdx} quota reached — switching to next key (${pool.summaryLine()}). Retrying…`,
             code: 'quota_retry',
           };
         } else {

@@ -1,24 +1,25 @@
 # Project Status
 
-> Maintained automatically by zex. Last updated: **08 Apr 2026 at 03:14 PM**
+> Maintained automatically by zex · Last updated: **12-Apr-2026, 09:51 am**
+> Project root: `X:\code\hackathons\gajshield-hack-X\project\cortex-vm`
 
 ---
 
 ## 🏗 What We Are Building
 
-A new React project.
+A simple todo list application with no CSS.
 
 ---
 
 ## 📍 Current Level / Stage
 
-Scaffolding
+MVP complete
 
 ---
 
 ## ✅ Current Status
 
-The React project has been initialized using create-react-app. The initial files and node_modules have been created.
+The basic HTML structure and JavaScript functionality for adding todo items are in place.
 
 ---
 
@@ -30,16 +31,18 @@ _Nothing confirmed working yet._
 
 ## 🔴 What Went Wrong / Issues
 
-The `npx create-react-app` command timed out, but the project files were created.
+_No issues recorded._
 
 ---
 
 ## 🔨 What Was Done
 
-Ran `npx create-react-app react_project` to initialize the project.
+- Created 'test' directory.
+- Created 'index.html' with basic todo list structure.
+- Created 'script.js' with functionality to add todo items.
 
 ---
 
 ## 🔜 Next Steps
 
-Verify the project structure and start the development server.
+- Inform the user that the todo list is created.
