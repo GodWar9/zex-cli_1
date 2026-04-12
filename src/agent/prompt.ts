@@ -116,6 +116,18 @@ Call \`update_project_status\` when:
 Do NOT call it for trivial questions. Only update when the project state changes.
 `.trim();
 
+export const UNDERSTANDING_SEGMENT = `
+# Response Format — Understanding Header
+At the start of EVERY response that is NOT purely a tool call:
+- Output a single line: \`[Understanding]: <one sentence summarizing what you understood the task to be and what you will do>\`
+- Do this BEFORE any explanation or code output.
+- Keep it concise — one sentence maximum.
+- If you are only calling tools with no text response, you may omit this line.
+
+Example:
+[Understanding]: The user wants to add a dark mode toggle to the Settings page by modifying the ThemeContext and adding a switch component.
+`.trim();
+
 /** Dynamic env segment — always includes current cwd/date/OS. */
 export function envSegment(): string {
   const cwd = process.cwd();
@@ -164,6 +176,7 @@ export function buildSystemPrompt(hasOutputStyle: boolean = false): string {
     SHELL_TOOL_SEGMENT,
     FS_TOOL_SEGMENT,
     PROJECT_STATUS_SEGMENT,
+    UNDERSTANDING_SEGMENT, // zex: added for intent-clarifier
     envSegment(),
   ];
   return segments.join('\n\n').trim();

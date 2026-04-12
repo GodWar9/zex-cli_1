@@ -6,6 +6,8 @@ import type { ConversationMessage, StreamChunk, ToolCallPayload } from './types.
 import { getTool } from '../tools/index.ts';
 
 import { compressHistory } from './gc.ts';
+import { encodeToolResult } from '../utils/toonEncoder.ts'; // zex: added for toon-encoding
+import { clarifyIntent } from './clarifier.ts'; // zex: added for intent-clarifier
 
 export type { ConversationMessage };
 
@@ -22,6 +24,8 @@ export interface RunnerCallbacks {
   onToolCall: (name: string, args: any) => Promise<boolean>;
   /** Optional: called when a key rotates so UI can display it */
   onKeyRotation?: (message: string) => void;
+  /** Optional: called when a security-sensitive intent is detected by the clarifier */
+  onSecurityFlag?: (goal: string) => void; // zex: added for intent-clarifier
 }
 
 const MAX_QUOTA_RETRIES = 16; // Maximum key rotations before giving up
@@ -47,11 +51,33 @@ export async function runTurn(
 ): Promise<ConversationMessage[]> {
   const config = loadConfig();
 
+  // ── Intent clarification (zex: added for intent-clarifier) ────────────────
+  // Run a cheap pre-call to extract structured intent. Fires only on new user
+  // messages (tool_loopback turns don't need this — the model already has context).
+  // Never blocks the main turn — all failures degrade gracefully to passthrough.
+  let effectiveUserMsg = userMsg;
+  {
+    const cwd = process.cwd();
+    const projectContext = `Working dir: ${cwd}`;
+    const intent = await clarifyIntent(userMsg, projectContext);
+
+    // Flag security-sensitive tasks so the UI can warn the user
+    if (intent.securitySensitive && callbacks.onSecurityFlag) {
+      callbacks.onSecurityFlag(intent.primaryGoal);
+    }
+
+    // If the intent is vague, prepend clarified goal to give the main agent a clear anchor.
+    // The user still sees their original message in the TUI — this only affects the LLM.
+    if (!intent.isClear) {
+      effectiveUserMsg = `[Intent parsed]: ${intent.primaryGoal}\n[Original]: ${userMsg}`;
+    }
+  }
+
   // Create local mutable history for this turn
   const compressedHistory = compressHistory(history);
   const messages: ConversationMessage[] = [
     ...compressedHistory,
-    { role: 'user', content: userMsg },
+    { role: 'user', content: effectiveUserMsg },
   ];
 
   let totalInputTokens = 0;
@@ -141,7 +167,21 @@ export async function runTurn(
           const approved = await callbacks.onToolCall(tc.name, tc.args);
           if (approved) {
              const res = await toolDef.execute(tc.args);
-             resultText = res.content;
+
+             // zex: added for toon-encoding — apply compact encoding only for structured-output tools
+             const TOON_TOOLS = new Set(['list_directory', 'search_files', 'update_project_status']);
+             if (TOON_TOOLS.has(tc.name) && !res.isError) {
+               try {
+                 // Attempt to parse as JSON first (in case tool returns JSON string)
+                 const parsed = JSON.parse(res.content);
+                 resultText = encodeToolResult(parsed);
+               } catch {
+                 // Not JSON — pass through as-is (already plain text tree/string)
+                 resultText = res.content;
+               }
+             } else {
+               resultText = res.content;
+             }
 
              // ── Checkpoint: record this successful tool result ──────────────
              const argsPreview = JSON.stringify(tc.args).substring(0, 80);

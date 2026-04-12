@@ -9,6 +9,7 @@ import { getActiveModelLabel, loadConfig, reloadConfig } from '../../config/inde
 import { parseSlashCommand, buildHelpMessage } from '../slashCommands.ts';
 import { undoStack } from '../../session/undoStack.ts';
 import { saveSession, loadLastSession, generateSessionId } from '../../session/store.ts';
+import { getSecuritySummary } from '../../security/eventLog.ts'; // zex: added for security-layer
 
 let msgCounter = 0;
 const nextId = () => String(++msgCounter);
@@ -176,6 +177,28 @@ export default function ChatScreen() {
         break;
       }
 
+      // zex: added for security-layer — display security event log
+      case 'security': {
+        const summary = getSecuritySummary();
+        // Color-code each line: BLOCKED=red, WARNING=yellow, LOGGED=gray
+        const coloredLines = summary
+          .split('\n')
+          .map((line) =>
+            line.includes('[BLOCKED]')
+              ? `\x1b[31m${line}\x1b[0m`   // red
+              : line.includes('[WARNING]')
+              ? `\x1b[33m${line}\x1b[0m`   // yellow
+              : line.includes('[LOGGED]')
+              ? `\x1b[90m${line}\x1b[0m`   // gray
+              : line,
+          )
+          .join('\n');
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system', content: `🔒 Security Report\n\n${coloredLines}`,
+        }]);
+        break;
+      }
+
       case 'unknown': {
         setMessages(prev => [...prev, {
           id: systemId, role: 'system',
@@ -267,6 +290,15 @@ export default function ChatScreen() {
                 setKeyPoolSummary(pool.summaryLine());
               } catch {}
             });
+          },
+
+          // zex: added for security-layer — show a TUI notice when task is security-sensitive
+          onSecurityFlag(goal: string) {
+            const flagId = nextId();
+            setMessages(prev => [
+              ...prev,
+              { id: flagId, role: 'system', content: `🔒 Security-sensitive task detected: "${goal}"\nRun /security after this turn to review any flagged patterns.` },
+            ]);
           },
         });
 

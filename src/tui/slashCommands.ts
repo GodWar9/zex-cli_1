@@ -16,6 +16,7 @@ export type SlashCommandResult =
   | { type: 'undo' }
   | { type: 'model'; modelName: string }
   | { type: 'resume' }
+  | { type: 'security' }
   | { type: 'help' }
   | { type: 'unknown'; input: string }
   | { type: 'not_a_command' }; // input doesn't start with /
@@ -26,6 +27,7 @@ const COMMANDS = [
   { name: '/plan',         desc: 'Toggle plan-before-act mode (agent proposes plan first)' },
   { name: '/undo',         desc: 'Revert the last file write made by the agent' },
   { name: '/resume',       desc: 'Load the most recent session from disk' },
+  { name: '/security',     desc: 'Show security events for this session (blocks, warnings, logs)' },
   { name: '/model <name>', desc: 'Switch the active model (e.g. /model gemini-2.0-flash)' },
   { name: '/help',         desc: 'Show this help list' },
 ];
@@ -38,12 +40,13 @@ export function parseSlashCommand(input: string): SlashCommandResult {
   const arg = rest.join(' ').trim();
 
   switch (cmd?.toLowerCase()) {
-    case '/clear': return { type: 'clear' };
-    case '/keys':  return { type: 'keys' };
-    case '/plan':  return { type: 'plan' };
-    case '/undo':  return { type: 'undo' };
-    case '/resume':return { type: 'resume' };
-    case '/help':  return { type: 'help' };
+    case '/clear':    return { type: 'clear' };
+    case '/keys':     return { type: 'keys' };
+    case '/plan':     return { type: 'plan' };
+    case '/undo':     return { type: 'undo' };
+    case '/resume':   return { type: 'resume' };
+    case '/security': return { type: 'security' };
+    case '/help':     return { type: 'help' };
     case '/model':
       if (!arg) return { type: 'unknown', input: trimmed };
       return { type: 'model', modelName: arg };
