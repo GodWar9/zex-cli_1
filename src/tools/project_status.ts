@@ -36,7 +36,7 @@ function expandPath(p: string): string {
  * Walk up from startDir looking for any project marker.
  * Returns the first directory that contains one, or cwd as fallback.
  */
-function detectProjectRoot(startDir: string): string {
+export function detectProjectRoot(startDir: string): string {
   let dir = startDir;
   // Walk up at most 6 levels — don't escape to /
   for (let i = 0; i < 6; i++) {

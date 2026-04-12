@@ -5,6 +5,8 @@ import { loadConfig } from '../config/index.ts';
 import type { ConversationMessage, StreamChunk, ToolCallPayload } from './types.ts';
 import { getTool } from '../tools/index.ts';
 
+import { compressHistory } from './gc.ts';
+
 export type { ConversationMessage };
 
 export interface RunnerCallbacks {
@@ -46,8 +48,9 @@ export async function runTurn(
   const config = loadConfig();
 
   // Create local mutable history for this turn
+  const compressedHistory = compressHistory(history);
   const messages: ConversationMessage[] = [
-    ...history,
+    ...compressedHistory,
     { role: 'user', content: userMsg },
   ];
 

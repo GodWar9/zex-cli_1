@@ -1,4 +1,7 @@
 import * as os from 'node:os';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { detectProjectRoot } from '../tools/project_status.ts';
 
 const FRONTIER_MODEL_NAME = "Zex Agent";
 
@@ -52,11 +55,11 @@ Rules:
 
 export const FS_TOOL_SEGMENT = `
 # File Operations
-You have access to \`read_file\`, \`write_file\`, and \`patch_file\` tools.
+You have access to \`read_file\`, \`write_file\`, \`patch_semantic\`, and \`patch_file\` tools.
 
 CRITICAL — File editing rules:
-- Use \`patch_file\` whenever possible for small or surgical changes to existing files! It saves tokens and is much safer.
-- When using \`patch_file\`, specify the exact 1-indexed start and end lines to replace.
+- HIGHLY PREFERRED: Use \`patch_semantic\` whenever possible for small or surgical changes to existing files! It saves tokens and prevents file corruption if line numbers drift.
+- Use \`patch_file\` ONLY if semantic patching fails and you must fall back to exact line numbers.
 - Use \`write_file\` ONLY for creating new files or when rewriting an entire file is absolutely necessary.
 - Write or patch files ONE AT A TIME. Call the tool immediately after generating each file's content.
 - Do NOT batch multiple files into one response. Generate file 1 → call tool → generate file 2 → call tool → etc.
@@ -127,6 +130,27 @@ export function envSegment(): string {
  - Date: ${date}
  - Platform: ${osName} ${osVersion}
 `.trim();
+}
+
+/** Dynamic working memory segment — reads project.md from project root. */
+export function workingMemorySegment(): string {
+  const cwd = process.cwd();
+  const root = detectProjectRoot(cwd);
+  const mdPath = join(root, 'project.md');
+  
+  if (existsSync(mdPath)) {
+    try {
+      const content = readFileSync(mdPath, 'utf-8');
+      return `
+# Persistent Working Memory
+
+${content}
+`.trim();
+    } catch (err) {
+      return '';
+    }
+  }
+  return '';
 }
 
 // ─── Legacy full-prompt builder (backward compat) ─────────────────────────────

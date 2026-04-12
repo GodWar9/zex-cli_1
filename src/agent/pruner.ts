@@ -17,6 +17,7 @@ import {
   FS_TOOL_SEGMENT,
   PROJECT_STATUS_SEGMENT,
   envSegment,
+  workingMemorySegment,
 } from './prompt.ts';
 
 export type TurnType = 'first_user' | 'tool_loopback' | 'continuation';
@@ -78,17 +79,20 @@ export function buildPrunedSystemPrompt(
   const turnType = classifyTurnType(messages);
 
   let segments: string[] = [];
+  const wm = workingMemorySegment();
 
   switch (turnType) {
     case 'first_user':
       // Full prompt — give the model everything it needs to understand its role
       segments = [CORE_SEGMENT, COLLECTOR_SEGMENT, ...selectToolSegments(toolNames), envSegment()];
+      if (wm) segments.unshift(wm); // Put working memory at the top!
       break;
 
     case 'continuation':
       // User asked a follow-up — include collector (they may be asking about a different part
       // of the project) and tools, but skip project_status (already in context from turn 1)
       segments = [CORE_SEGMENT, COLLECTOR_SEGMENT, ...selectToolSegments(toolNames), envSegment()];
+      if (wm) segments.unshift(wm); // Put working memory at the top!
       break;
 
     case 'tool_loopback':

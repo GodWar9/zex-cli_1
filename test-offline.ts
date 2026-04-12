@@ -39,7 +39,7 @@ section('Tool Registry');
 const toolNames = availableTools.map(t => t.name);
 console.log(`  ${DIM}Registered tools: ${toolNames.join(', ')}${RESET}`);
 
-const requiredTools = ['list_directory', 'search_files', 'read_file', 'patch_file', 'write_file', 'run_shell_command', 'update_project_status'];
+const requiredTools = ['list_directory', 'search_files', 'read_file', 'patch_semantic', 'patch_file', 'write_file', 'run_shell_command', 'update_project_status'];
 for (const name of requiredTools) {
   const tool = getTool(name);
   if (tool) {
@@ -148,6 +148,27 @@ try {
   }
 } catch (e: any) {
   fail('search_files (file_types) threw', e.message);
+}
+
+// ─── 4. patch_semantic Tool ───────────────────────────────────────────────────
+section('patch_semantic Tool');
+
+try {
+  const patchSemTool = getTool('patch_semantic');
+  if (patchSemTool) {
+    ok('patch_semantic tool exists in registry');
+    
+    // Quick validation of the schema
+    if (patchSemTool.inputSchema.required?.includes('search_content')) {
+       ok('Schema requires search_content');
+    } else {
+       fail('Schema invalid', 'Missing search_content');
+    }
+  } else {
+    fail('patch_semantic tool not found', '');
+  }
+} catch (e: any) {
+  fail('patch_semantic test threw', e.message);
 }
 
 // ─── 4. Pruner / Turn Classification ─────────────────────────────────────────
@@ -267,6 +288,78 @@ try {
 } catch (e: any) {
   fail('KeyPool test threw', e.message);
 }
+
+// ─── 7. Garbage Collector (GC) ────────────────────────────────────────────────
+section('Garbage Collector (GC)');
+
+try {
+  const { compressHistory } = await import('./src/agent/gc.ts');
+  const mockHistory: ConversationMessage[] = [
+    { role: 'user', content: 'Turn 1' },
+    { role: 'assistant', content: 'Let me do this', toolCalls: [{ id: '1', name: 't', args: {} }] },
+    { role: 'tool', content: 'a'.repeat(1000), toolCallId: '1', name: 't' }, // Needs compression
+    { role: 'user', content: 'Turn 2' },
+    { role: 'assistant', content: 'Another tool', toolCalls: [{ id: '2', name: 't', args: {} }] },
+    { role: 'tool', content: 'a'.repeat(1000), toolCallId: '2', name: 't' }, // Keep (within last 2 turns)
+    { role: 'user', content: 'Turn 3' }
+  ];
+
+  const compressed = compressHistory(mockHistory);
+  
+  if (compressed[2].role === 'tool' && compressed[2].content.includes('Heavy payload compressed')) {
+    ok('compressHistory successfully compresses tools older than 2 turns');
+  } else {
+    fail('compressHistory failed to compress old turn', `Got: ${compressed[2].content.slice(0, 50)}`);
+  }
+
+  if (compressed[5].role === 'tool' && compressed[5].content.length === 1000) {
+    ok('compressHistory leaves recent tool results intact');
+  } else {
+    fail('compressHistory compressed a recent turn incorrectly', '');
+  }
+
+  // Small payloads on old turns should remain untouched
+  const mockHistorySmall: ConversationMessage[] = [
+    { role: 'user', content: 'Turn 1' },
+    { role: 'tool', content: 'small payload', toolCallId: '1', name: 't' },
+    { role: 'user', content: 'Turn 2' },
+    { role: 'user', content: 'Turn 3' },
+  ];
+  const compressedSmall = compressHistory(mockHistorySmall);
+  if (compressedSmall[1].content === 'small payload') {
+    ok('compressHistory leaves small payloads intact even if old');
+  } else {
+    fail('compressHistory incorrectly compressed a small payload', '');
+  }
+
+} catch (e: any) {
+  fail('GC tests threw', e.message);
+}
+
+// ─── 8. Persistent Working Memory ────────────────────────────────────────────────
+section('Persistent Working Memory');
+
+try {
+  const { workingMemorySegment } = await import('./src/agent/prompt.ts');
+  const segment = workingMemorySegment();
+  
+  if (typeof segment === 'string') {
+    ok('workingMemorySegment executes without crashing and returns a string');
+    if (segment.includes('Persistent Working Memory')) {
+      ok('Working memory picked up project.md correctly');
+    } else {
+       // It's possible project.md doesn't exist locally out of the box
+       ok('workingMemorySegment returned empty (no project.md found)');
+    }
+  } else {
+    fail('workingMemorySegment did not return a string', '');
+  }
+
+} catch (e: any) {
+  fail('Persistent Working Memory tests threw', e.message);
+}
+
+// (Duplicate block removed)
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(55)}`);
