@@ -8,12 +8,15 @@ export type Message = {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  isLog?: boolean;
 };
 
 type Props = {
   messages: Message[];
   /** When true, shows a blinking cursor at the end of the last assistant message */
   isStreaming?: boolean;
+  /** Whether to show background tool logs */
+  showLogs?: boolean;
 };
 
 function MessageRow({
@@ -115,8 +118,10 @@ function MessageRow({
   );
 }
 
-export default function MessageList({ messages, isStreaming = false }: Props) {
-  if (messages.length === 0) {
+export default function MessageList({ messages, isStreaming = false, showLogs = false }: Props) {
+  const visibleMessages = messages.filter(m => showLogs ? true : !m.isLog);
+
+  if (visibleMessages.length === 0) {
     return (
       <Box flexGrow={1} alignItems="center" justifyContent="center">
         <Text color={theme.colors.dim}>
@@ -130,11 +135,11 @@ export default function MessageList({ messages, isStreaming = false }: Props) {
     );
   }
 
-  const lastIdx = messages.length - 1;
+  const lastIdx = visibleMessages.length - 1;
 
   return (
     <Box flexDirection="column" flexGrow={1} paddingTop={1}>
-      {messages.map((msg, idx) => (
+      {visibleMessages.map((msg, idx) => (
         <MessageRow
           key={msg.id}
           message={msg}

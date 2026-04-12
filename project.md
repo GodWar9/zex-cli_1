@@ -1,24 +1,25 @@
 # Project Status
 
-> Maintained automatically by zex. Last updated: **08 Apr 2026 at 03:14 PM**
+> Maintained automatically by zex · Last updated: **12 Apr 2026 at 07:59 AM**
+> Project root: `/Users/pratikpatil/Developer/Hackathon/CortexVM`
 
 ---
 
 ## 🏗 What We Are Building
 
-A new React project.
+Welcome Counter App
 
 ---
 
 ## 📍 Current Level / Stage
 
-Scaffolding
+Core logic done
 
 ---
 
 ## ✅ Current Status
 
-The React project has been initialized using create-react-app. The initial files and node_modules have been created.
+The WelcomeCounter.js file has been completed with a counter that updates every second.
 
 ---
 
@@ -30,16 +31,16 @@ _Nothing confirmed working yet._
 
 ## 🔴 What Went Wrong / Issues
 
-The `npx create-react-app` command timed out, but the project files were created.
+_No issues recorded._
 
 ---
 
 ## 🔨 What Was Done
 
-Ran `npx create-react-app react_project` to initialize the project.
+- Implemented a counter using useState and useEffect in WelcomeCounter.js.
 
 ---
 
 ## 🔜 Next Steps
 
-Verify the project structure and start the development server.
+_Not planned yet._

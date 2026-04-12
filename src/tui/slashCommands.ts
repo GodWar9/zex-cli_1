@@ -18,6 +18,7 @@ export type SlashCommandResult =
   | { type: 'resume' }
   | { type: 'security' }
   | { type: 'help' }
+  | { type: 'logs'; enable: boolean }
   | { type: 'unknown'; input: string }
   | { type: 'not_a_command' }; // input doesn't start with /
 
@@ -29,6 +30,8 @@ const COMMANDS = [
   { name: '/resume',       desc: 'Load the most recent session from disk' },
   { name: '/security',     desc: 'Show security events for this session (blocks, warnings, logs)' },
   { name: '/model <name>', desc: 'Switch the active model (e.g. /model gemini-2.0-flash)' },
+  { name: '/model <name>', desc: 'Switch the active model' },
+  { name: '/logs <enable|disable>', desc: 'Toggle visibility of background steps/tool logs' },
   { name: '/help',         desc: 'Show this help list' },
 ];
 
@@ -40,13 +43,16 @@ export function parseSlashCommand(input: string): SlashCommandResult {
   const arg = rest.join(' ').trim();
 
   switch (cmd?.toLowerCase()) {
-    case '/clear':    return { type: 'clear' };
-    case '/keys':     return { type: 'keys' };
-    case '/plan':     return { type: 'plan' };
-    case '/undo':     return { type: 'undo' };
-    case '/resume':   return { type: 'resume' };
-    case '/security': return { type: 'security' };
-    case '/help':     return { type: 'help' };
+    case '/clear': return { type: 'clear' };
+    case '/keys':  return { type: 'keys' };
+    case '/plan':  return { type: 'plan' };
+    case '/undo':  return { type: 'undo' };
+    case '/resume':return { type: 'resume' };
+    case '/help':  return { type: 'help' };
+    case '/logs':
+      if (arg === 'enable') return { type: 'logs', enable: true };
+      if (arg === 'disable') return { type: 'logs', enable: false };
+      return { type: 'unknown', input: trimmed };
     case '/model':
       if (!arg) return { type: 'unknown', input: trimmed };
       return { type: 'model', modelName: arg };

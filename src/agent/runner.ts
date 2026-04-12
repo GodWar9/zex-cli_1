@@ -27,6 +27,8 @@ export interface RunnerCallbacks {
   onKeyRotation?: (message: string) => void;
   /** Optional: called when a security-sensitive intent is detected by the clarifier */
   onSecurityFlag?: (goal: string) => void; // zex: added for intent-clarifier
+  /** Optional: called when a tool finishes executing so UI can log it */
+  onToolResult?: (name: string, result: string, isError?: boolean) => void;
 }
 
 const MAX_QUOTA_RETRIES = 16; // Maximum key rotations before giving up
@@ -176,6 +178,10 @@ export async function runTurn(
                resultText = encodeToolResult(res.structuredData);
              } else {
                resultText = res.content;
+             }
+
+             if (callbacks.onToolResult) {
+               callbacks.onToolResult(tc.name, resultText, res.isError);
              }
 
              // ── Checkpoint: record this successful tool result ──────────────
