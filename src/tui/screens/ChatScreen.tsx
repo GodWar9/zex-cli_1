@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
 import Banner from '../components/Banner.tsx';
 import MessageList, { type Message } from '../components/MessageList.tsx';
@@ -9,7 +9,9 @@ import { getActiveModelLabel, loadConfig, reloadConfig } from '../../config/inde
 import { parseSlashCommand, buildHelpMessage } from '../slashCommands.ts';
 import { undoStack } from '../../session/undoStack.ts';
 import { saveSession, loadLastSession, generateSessionId } from '../../session/store.ts';
-import { getSecuritySummary } from '../../security/eventLog.ts'; // zex: added for security-layer
+import { getSecuritySummary, logSecurityEvent } from '../../security/eventLog.ts'; // zex: added for security-layer
+import { auditProject } from '../../security/projectAudit.ts'; // zex: added for security-layer
+import { join } from 'node:path';
 
 let msgCounter = 0;
 const nextId = () => String(++msgCounter);
@@ -40,6 +42,41 @@ export default function ChatScreen() {
 
   const streamingMsgId = useRef<string | null>(null);
   const historyRef     = useRef<ConversationMessage[]>([]);
+  const auditDone      = useRef(false); // zex: added for security-layer
+
+  // ── Project Security Audit (zex: added for security-layer) ──────────────────
+  useEffect(() => {
+    if (auditDone.current) return;
+    auditDone.current = true;
+
+    async function runAudit() {
+      const root = process.cwd();
+      const context = await auditProject(root);
+
+      // Log existing findings to the security log
+      for (const finding of context.existingFindings) {
+        logSecurityEvent({
+          turn: 0,
+          tool: 'audit',
+          file: 'pre-existing',
+          finding,
+          action: 'logged',
+          timestamp: new Date(),
+        });
+      }
+
+      setMessages(prev => [
+        ...prev,
+        {
+          id: nextId(),
+          role: 'system',
+          content: `🔍 [Security Audit] Tech: ${context.framework} | Auth: ${context.hasAuth ? 'Yes' : 'No'} | DB: ${context.hasDatabase ? 'Yes' : 'No'}\n${context.existingFindings.length > 0 ? `⚠ Found ${context.existingFindings.length} pre-existing security concerns (run /security to view).` : '✅ No immediate security concerns found.'}`
+        }
+      ]);
+    }
+
+    runAudit();
+  }, []);
 
   // ── Tool permission gate (Y / n) ────────────────────────────────────────────
   useInput((input, key) => {

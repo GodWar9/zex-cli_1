@@ -19,6 +19,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
     "@google/generative-ai": "^0.24.1",
+    "@toon-format/toon": "^2.1.0",
     "ink": "^6.8.0",
     "ink-text-input": "^6.0.0",
     "meow": "^14.1.0",

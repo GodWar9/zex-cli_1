@@ -196,6 +196,9 @@ Returns matching file paths and line numbers with surrounding context.`,
       walkSearch(targetPath, targetPath, pattern, results, includeExts);
     }
 
-    return { content: formatResults(results, query, targetPath) };
+    return {
+      content: formatResults(results, query, targetPath),
+      structuredData: results, // zex: added for toon-encoding — uniform {file,line,content}[]
+    };
   },
 };

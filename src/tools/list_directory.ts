@@ -141,6 +141,24 @@ Skips node_modules, .git, build artifacts, and binary files automatically.`,
 
     const output = `Project structure: ${targetPath}\n\n${tree || '(empty directory)'}${truncatedNote}\n\nTotal: ${count.n} items shown`;
 
-    return { content: output };
+    // zex: added for toon-encoding — flatten the entry tree into a uniform array
+    const flatEntries = flattenEntries(entries);
+
+    return {
+      content: output,
+      structuredData: flatEntries,
+    };
   },
 };
+
+/** Flatten the nested Entry tree into a uniform array for TOON encoding. */
+function flattenEntries(entries: Entry[], result: Array<{ path: string; type: string }> = []): Array<{ path: string; type: string }> {
+  for (const e of entries) {
+    result.push({ path: e.path, type: e.type });
+    if (e.children && e.children.length > 0) {
+      flattenEntries(e.children, result);
+    }
+  }
+  return result;
+}
+

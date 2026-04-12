@@ -8,6 +8,7 @@ import { getTool } from '../tools/index.ts';
 import { compressHistory } from './gc.ts';
 import { encodeToolResult } from '../utils/toonEncoder.ts'; // zex: added for toon-encoding
 import { clarifyIntent } from './clarifier.ts'; // zex: added for intent-clarifier
+import { incrementTurn } from '../security/eventLog.ts'; // zex: added for security-layer
 
 export type { ConversationMessage };
 
@@ -49,6 +50,7 @@ export async function runTurn(
   userMsg: string,
   callbacks: RunnerCallbacks,
 ): Promise<ConversationMessage[]> {
+  incrementTurn(); // zex: added for security-layer
   const config = loadConfig();
 
   // ── Intent clarification (zex: added for intent-clarifier) ────────────────
@@ -169,16 +171,9 @@ export async function runTurn(
              const res = await toolDef.execute(tc.args);
 
              // zex: added for toon-encoding — apply compact encoding only for structured-output tools
-             const TOON_TOOLS = new Set(['list_directory', 'search_files', 'update_project_status']);
-             if (TOON_TOOLS.has(tc.name) && !res.isError) {
-               try {
-                 // Attempt to parse as JSON first (in case tool returns JSON string)
-                 const parsed = JSON.parse(res.content);
-                 resultText = encodeToolResult(parsed);
-               } catch {
-                 // Not JSON — pass through as-is (already plain text tree/string)
-                 resultText = res.content;
-               }
+             const TOON_TOOLS = new Set(['list_directory', 'search_files']);
+             if (TOON_TOOLS.has(tc.name) && !res.isError && res.structuredData) {
+               resultText = encodeToolResult(res.structuredData);
              } else {
                resultText = res.content;
              }
