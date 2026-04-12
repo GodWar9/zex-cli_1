@@ -1,25 +1,25 @@
 # Project Status
 
-> Maintained automatically by zex · Last updated: **12-Apr-2026, 09:51 am**
-> Project root: `X:\code\hackathons\gajshield-hack-X\project\cortex-vm`
+> Maintained automatically by zex · Last updated: **12 Apr 2026 at 07:59 AM**
+> Project root: `/Users/pratikpatil/Developer/Hackathon/CortexVM`
 
 ---
 
 ## 🏗 What We Are Building
 
-A simple todo list application with no CSS.
+Welcome Counter App
 
 ---
 
 ## 📍 Current Level / Stage
 
-MVP complete
+Core logic done
 
 ---
 
 ## ✅ Current Status
 
-The basic HTML structure and JavaScript functionality for adding todo items are in place.
+The WelcomeCounter.js file has been completed with a counter that updates every second.
 
 ---
 
@@ -37,12 +37,10 @@ _No issues recorded._
 
 ## 🔨 What Was Done
 
-- Created 'test' directory.
-- Created 'index.html' with basic todo list structure.
-- Created 'script.js' with functionality to add todo items.
+- Implemented a counter using useState and useEffect in WelcomeCounter.js.
 
 ---
 
 ## 🔜 Next Steps
 
-- Inform the user that the todo list is created.
+_Not planned yet._

@@ -31,6 +31,7 @@ export default function ChatScreen() {
   const [tokenCount, setTokenCount]   = useState(0);
   const [modelLabel, setModelLabel]   = useState(() => getActiveModelLabel());
   const [planMode, setPlanMode]       = useState(false);
+  const [logsEnabled, setLogsEnabled] = useState(false);
   const [keyPoolSummary, setKeyPoolSummary] = useState<string | undefined>(undefined);
   const [sessionId] = useState(() => generateSessionId());
 
@@ -140,6 +141,13 @@ export default function ChatScreen() {
         });
         break;
 
+      case 'logs':
+        setLogsEnabled(result.enable);
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system', content: result.enable ? '✅ Background tool logs visibility enabled.' : '❌ Background tool logs hidden.'
+        }]);
+        break;
+
       case 'undo': {
         const preview = undoStack.peekDescription();
         if (!preview) {
@@ -185,12 +193,12 @@ export default function ChatScreen() {
             }
             if (m.toolCalls) {
               for (const tc of m.toolCalls) {
-                arr.push({ id: nextId(), role: 'assistant', content: `[Tool Call] ${tc.name}` });
+                arr.push({ id: nextId(), role: 'assistant', content: `[Tool Call] ${tc.name}`, isLog: true });
               }
             }
             // For tool role:
             if (m.role === 'tool') {
-               arr.push({ id: nextId(), role: 'system', content: `[Tool Result] ${String((m as any).content).substring(0, 50)}...` });
+               arr.push({ id: nextId(), role: 'system', content: `[Tool Result] ${String((m as any).content).substring(0, 50).replace(/\n/g, ' ')}...`, isLog: true });
             }
             return arr;
           });
@@ -302,7 +310,17 @@ export default function ChatScreen() {
             }
             return new Promise(resolve => {
               setPendingTool({ name, args, resolve });
+              setMessages(prev => [...prev, {
+                 id: nextId(), role: 'assistant', content: `[Tool Call] ${name}`, isLog: true
+              }]);
             });
+          },
+
+          onToolResult(name, result, isError) {
+             const status = isError ? '✗ Error' : '✓ Result';
+             setMessages(prev => [...prev, {
+               id: nextId(), role: 'system', content: `[${status}] ${name}: ${String(result).substring(0, 80).replace(/\n/g, ' ')}...`, isLog: true
+             }]);
           },
 
           onKeyRotation(message) {
@@ -344,7 +362,7 @@ export default function ChatScreen() {
   return (
     <Box flexDirection="column" height="100%">
       <Banner />
-      <MessageList messages={messages} isStreaming={isLoading || !!pendingTool} />
+      <MessageList messages={messages} isStreaming={isLoading || !!pendingTool} showLogs={logsEnabled} />
 
       {pendingTool ? (
         <Box borderStyle="round" borderColor="yellow" paddingX={1} flexDirection="column">
