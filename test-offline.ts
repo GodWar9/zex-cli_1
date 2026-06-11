@@ -297,22 +297,25 @@ try {
   const mockHistory: ConversationMessage[] = [
     { role: 'user', content: 'Turn 1' },
     { role: 'assistant', content: 'Let me do this', toolCalls: [{ id: '1', name: 't', args: {} }] },
-    { role: 'tool', content: 'a'.repeat(1000), toolCallId: '1', name: 't' }, // Needs compression
+    { role: 'tool', content: 'a'.repeat(1000), toolCallId: '1', name: 't' }, // Needs compression (>3 turns ago)
     { role: 'user', content: 'Turn 2' },
     { role: 'assistant', content: 'Another tool', toolCalls: [{ id: '2', name: 't', args: {} }] },
-    { role: 'tool', content: 'a'.repeat(1000), toolCallId: '2', name: 't' }, // Keep (within last 2 turns)
-    { role: 'user', content: 'Turn 3' }
+    { role: 'tool', content: 'a'.repeat(1000), toolCallId: '2', name: 't' }, // Keep (recent)
+    { role: 'user', content: 'Turn 3' },
+    { role: 'user', content: 'Turn 4' },
+    { role: 'user', content: 'Turn 5' },
   ];
 
   const compressed = compressHistory(mockHistory);
   
-  if (compressed[2].role === 'tool' && compressed[2].content.includes('Heavy payload compressed')) {
+  if (compressed[2].role === 'tool' && compressed[2].content.includes('[Compressed:')) {
     ok('compressHistory successfully compresses tools older than 2 turns');
   } else {
     fail('compressHistory failed to compress old turn', `Got: ${compressed[2].content.slice(0, 50)}`);
   }
 
-  if (compressed[5].role === 'tool' && compressed[5].content.length === 1000) {
+  const recentTool = compressed.find((m, i) => i > 2 && m.role === 'tool' && m.toolCallId === '2');
+  if (recentTool && recentTool.content.length === 1000) {
     ok('compressHistory leaves recent tool results intact');
   } else {
     fail('compressHistory compressed a recent turn incorrectly', '');

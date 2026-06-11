@@ -6,9 +6,22 @@ import type { ConversationMessage, StreamChunk, ToolCallPayload } from './types.
 import { getTool } from '../tools/index.ts';
 
 import { compressHistory } from './gc.ts';
-import { encodeToolResult } from '../utils/toonEncoder.ts'; // zex: added for toon-encoding
-import { clarifyIntent } from './clarifier.ts'; // zex: added for intent-clarifier
-import { incrementTurn } from '../security/eventLog.ts'; // zex: added for security-layer
+import { encodeToolResult } from '../utils/toonEncoder.ts';
+import { clarifyIntent } from './clarifier.ts';
+import { parseIntent } from './intent.ts';
+import { incrementTurn, getCurrentTurn } from '../security/eventLog.ts';
+import { dualCache } from '../cache/index.ts';
+import { messagesToChunks, pruneChunks, chunksToMessages } from '../context/chunkPruner.ts';
+import { formatMemoriesForPrompt } from '../session/memory.ts';
+import { metrics } from '../session/metrics.ts';
+import { countTokens } from '../utils/tokens.ts';
+import { DEFAULT_TOKEN_BUDGET } from '../config/defaults.ts';
+import { gc } from './gcState.ts';
+import { getCriticalPath } from '../context/depMapper.ts';
+import { styleGuidePrompt } from '../context/styleGuide.ts';
+import { budgetTracker } from '../session/budget.ts';
+import { setAuditTurn, writeAudit } from '../enterprise/auditLog.ts';
+import { checkToolPolicy } from '../enterprise/policies.ts';
 
 export type { ConversationMessage };
 
@@ -52,35 +65,80 @@ export async function runTurn(
   userMsg: string,
   callbacks: RunnerCallbacks,
 ): Promise<ConversationMessage[]> {
-  incrementTurn(); // zex: added for security-layer
+  incrementTurn();
+  setAuditTurn(getCurrentTurn());
   const config = loadConfig();
 
-  // ── Intent clarification (zex: added for intent-clarifier) ────────────────
-  // Run a cheap pre-call to extract structured intent. Fires only on new user
-  // messages (tool_loopback turns don't need this — the model already has context).
-  // Never blocks the main turn — all failures degrade gracefully to passthrough.
+  // ── Fast intent parser (regex) + LLM clarifier ────────────────────────────
+  const parsedIntent = parseIntent(userMsg);
   let effectiveUserMsg = userMsg;
+
+  if (parsedIntent.constraints.forceReview && callbacks.onSecurityFlag) {
+    callbacks.onSecurityFlag(`High-risk ${parsedIntent.action}: review required before execution`);
+  }
+
   {
     const cwd = process.cwd();
-    const projectContext = `Working dir: ${cwd}`;
+    const projectContext = `Working dir: ${cwd} | Action: ${parsedIntent.action} | Files: ${parsedIntent.targets.files.join(', ') || 'unknown'}`;
     const intent = await clarifyIntent(userMsg, projectContext);
 
-    // Flag security-sensitive tasks so the UI can warn the user
     if (intent.securitySensitive && callbacks.onSecurityFlag) {
       callbacks.onSecurityFlag(intent.primaryGoal);
     }
 
-    // If the intent is vague, prepend clarified goal to give the main agent a clear anchor.
-    // The user still sees their original message in the TUI — this only affects the LLM.
     if (!intent.isClear) {
-      effectiveUserMsg = `[Intent parsed]: ${intent.primaryGoal}\n[Original]: ${userMsg}`;
+      effectiveUserMsg = `[Intent: ${parsedIntent.action}] ${intent.primaryGoal}\n[Original]: ${userMsg}`;
+    } else if (parsedIntent.targets.files.length > 0) {
+      effectiveUserMsg = `[Targets: ${parsedIntent.targets.files.join(', ')}]\n${userMsg}`;
     }
   }
 
-  // Create local mutable history for this turn
+  // ── Cache lookup ──────────────────────────────────────────────────────────
+  const contextPaths = parsedIntent.targets.files;
+  const cacheHit = dualCache.get(userMsg, contextPaths, config.provider.model);
+  if (cacheHit) {
+    callbacks.onDelta(cacheHit.text);
+    callbacks.onUsage(0, countTokens(cacheHit.text));
+    callbacks.onDone('cache_hit');
+    return [
+      ...history,
+      { role: 'user', content: userMsg },
+      { role: 'assistant', content: cacheHit.text },
+    ];
+  }
+
+  // ── Context pruning with token budget ─────────────────────────────────────
+  const pruneStart = Date.now();
   const compressedHistory = compressHistory(history);
+
+  // Expand target files via dependency graph
+  const depFiles = new Set<string>(parsedIntent.targets.files);
+  for (const f of parsedIntent.targets.files) {
+    for (const dep of getCriticalPath(f, 2)) depFiles.add(dep);
+  }
+
+  const chunks = messagesToChunks(compressedHistory, [...depFiles]);
+  for (const c of chunks) gc.addRef(c.id, { id: c.id, content: c.content, timestamp: c.timestamp });
+
+  const mustInclude = chunks.filter((c) => c.pinned).map((c) => c.id);
+  const pruneResult = pruneChunks(chunks, userMsg, DEFAULT_TOKEN_BUDGET.allocation.history, {
+    mustInclude: mustInclude.length ? mustInclude : undefined,
+    minRecencyWindowMs: 10 * 60 * 1000,
+  });
+  const prunedHistory = chunksToMessages(compressedHistory, pruneResult.kept);
+  const tokensBefore = chunks.reduce((s, c) => s + c.tokens, 0);
+  metrics.recordPrune(tokensBefore, pruneResult.tokensUsed, Date.now() - pruneStart);
+
+  // ── Inject persistent memory ──────────────────────────────────────────────
+  const memoryBlock = formatMemoriesForPrompt(userMsg);
+  const styleBlock = styleGuidePrompt();
+  const systemInjections: ConversationMessage[] = [];
+  if (styleBlock) systemInjections.push({ role: 'system', content: styleBlock });
+  if (memoryBlock) systemInjections.push({ role: 'system', content: memoryBlock });
+
   const messages: ConversationMessage[] = [
-    ...compressedHistory,
+    ...prunedHistory,
+    ...systemInjections,
     { role: 'user', content: effectiveUserMsg },
   ];
 
@@ -168,6 +226,14 @@ export async function runTurn(
         if (!toolDef) {
           resultText = `Error: Tool '${tc.name}' not found.`;
         } else {
+          const policy = checkToolPolicy(tc.name, tc.args);
+          if (!policy.allowed) {
+            resultText = `Blocked by org policy: ${policy.reason}`;
+            if (callbacks.onToolResult) callbacks.onToolResult(tc.name, resultText, true);
+            messages.push({ role: 'tool', content: resultText, toolCallId: tc.id, name: tc.name });
+            continue;
+          }
+
           const approved = await callbacks.onToolCall(tc.name, tc.args);
           if (approved) {
              const res = await toolDef.execute(tc.args);
@@ -188,6 +254,13 @@ export async function runTurn(
              const argsPreview = JSON.stringify(tc.args).substring(0, 80);
              const status = res.isError ? '✗' : '✓';
              checkpointLog.push(`${status} ${tc.name}(${argsPreview})`);
+
+             writeAudit({
+               category: 'tool',
+               action: res.isError ? 'error' : 'execute',
+               resource: tc.name,
+               details: { args: tc.args, isError: res.isError },
+             });
 
              // ── Git Auto-Checkpoint ──────────────────────────────────────────
              if ((tc.name === 'write_file' || tc.name === 'patch_file') && !res.isError) {
@@ -220,7 +293,18 @@ export async function runTurn(
     }
   }
 
+  metrics.recordTokens(totalInputTokens, totalOutputTokens);
+  budgetTracker.trackUsage(totalInputTokens, totalOutputTokens);
   callbacks.onUsage(totalInputTokens, totalOutputTokens);
+
+  // Cache the response for similar future queries
+  const finalAssistant = messages.filter((m) => m.role === 'assistant').pop();
+  if (finalAssistant?.content) {
+    dualCache.set(userMsg, finalAssistant.content, contextPaths, config.provider.model);
+  }
+
+  for (const c of chunks) gc.releaseRef(c.id);
+
   callbacks.onDone('end_turn');
   return messages;
 }

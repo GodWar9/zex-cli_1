@@ -5,8 +5,19 @@ import type { ProviderId, ProviderConfig } from '../agent/types.ts';
 export type { ProviderId };
 
 export interface ZexConfig {
-  /** The active LLM provider settings */
   provider: ProviderConfig;
+  multiAgent?: boolean;
+}
+
+export interface ContextConfig {
+  maxTokens?: number;
+  minRecencyWindow?: number;
+}
+
+export interface CacheConfig {
+  semanticThreshold?: number;
+  ttlExactCache?: number;
+  ttlToolResults?: number;
 }
 
 export interface UserConfig {
@@ -22,4 +33,8 @@ export interface UserConfig {
   maxTokens?: number;
   temperature?: number;
   systemPrompt?: string;
+  context?: ContextConfig;
+  cache?: CacheConfig;
+  /** Enable multi-agent DAG orchestration */
+  multiAgent?: boolean;
 }

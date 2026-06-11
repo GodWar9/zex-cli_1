@@ -1,4 +1,5 @@
 import type { ConversationMessage } from './types.ts';
+import { metrics } from '../session/metrics.ts';
 
 /**
  * Returns a new array with old, massive tool payloads compressed to save tokens.
@@ -37,6 +38,9 @@ export function compressHistory(messages: ConversationMessage[], maxTokens?: num
         const toolName = msg.name ?? 'tool';
         const lineCount = msg.content.split('\n').length;
         const argsHint = extractArgsHint(msg);
+        const bytesSaved = msg.content.length;
+
+        metrics.recordCompaction(bytesSaved);
 
         return {
           ...msg,

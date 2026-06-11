@@ -31,18 +31,33 @@ Security is not an afterthought. Every interaction is gated by a multi-tier secu
 
 ### Advanced Context Hygiene
 
-- **Relevance-Aware GC**: Prunes history intelligently. Tool results are only compressed if they are old, large, and **not referenced** in the recent conversation.
-- **TOON Encoding**: Integrated compact encoding for directory listings and search results, providing up to **50% token reduction** for large datasets.
-- **Intent Clarifier**: A high-speed intent parser pre-analyzes every request to disambiguate vague commands and flag security risks early.
+- **Semantic Chunk Pruner**: Scores history by relevance, recency, and importance; greedily packs within a 128k token budget using exact `js-tiktoken` counts.
+- **Relevance-Aware GC**: Reference-counted chunk store with lease eviction; tool results compressed only when old, large, and unreferenced.
+- **Dual Cache**: Exact (SHA-256) + semantic (cosine similarity) response cache with file-watcher invalidation.
+- **TOON Encoding**: Compact encoding for directory listings and search results (~50% token reduction).
+- **Intent Parser + Clarifier**: Fast regex intent extraction (action, files, risk level) plus LLM disambiguation for vague requests.
+- **Persistent Memory**: `/remember` and `/recall` for cross-session learnings stored in `~/.zex/memory.json`.
 
 ### Core Features
 
 - **Multi-Key Rotation**: Automatically cycles through your Gemini API key pool to bypass rate limits and ensure uninterrupted workflow.
+- **Multi-Agent DAG** (opt-in via `"multiAgent": true`): Planner → Coder → Tester → Reviewer with debugger path for `/debug` intents.
+- **Collaborative Debugging** (`/debug`): Coder + Debugger + Reviewer propose fixes, weighted vote picks winner.
+- **Dependency Auditing** (`/deps`): npm audit integration + heuristic fallback for CVE detection.
+- **Cost Tracking** (`/stats --budget`): Per-agent USD spend with org budget cap enforcement.
+- **Memory Clustering** (`/cluster`): Auto-merges duplicate `/remember` entries on startup.
+- **Enterprise (Q4)**:
+  - Org policies via `~/.zex/org.json` (see `org.example.json`)
+  - SAML/LDAP/API-key auth stubs (`/login`, `ZEX_AUTH_TOKEN`)
+  - Persistent audit log (`~/.zex/audit/`, `/audit`)
+  - Fine-tune export (`/export-finetune` → JSONL dataset)
 - **Slash Commands**:
-  - `/security`: View the full security audit and event history.
-  - `/undo`: Instant revert of the last file change.
-  - `/plan`: Toggle mode to force the agent to propose a plan before touching code.
-  - `/keys`: Check the health and cooldown status of your API keys.
+  - `/context` — token budget and context composition
+  - `/stats` — cache hits, pruner runs, agent timings
+  - `/remember` / `/recall` — persistent memory
+  - `/export` — export session as markdown
+  - `/undo` / `/redo` — file change history
+  - `/security`, `/plan`, `/keys`, `/config`, `/reset`
 - **Streaming TUI**: A beautiful, reactive terminal interface built with React (Ink).
 
 ### Advantages
@@ -61,10 +76,21 @@ Security is not an afterthought. Every interaction is gated by a multi-tier secu
 
 #### Installation
 ```bash
+# Windows / OneDrive: use npm (bun install can leave empty placeholder folders)
+npm install
+
+# macOS / Linux
 bun install
 ```
 
 #### Run
 ```bash
-bun dev 
+bun dev
+# or: npm start
+```
+
+Set your API key before chatting:
+```bash
+# PowerShell
+$env:GEMINI_API_KEY = "your-key-here"
 ```

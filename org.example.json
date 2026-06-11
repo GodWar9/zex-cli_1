@@ -1,0 +1,19 @@
+{
+  "orgId": "acme-corp",
+  "orgName": "Acme Engineering",
+  "auth": {
+    "provider": "none",
+    "required": false,
+    "ldapUrl": "ldap://ldap.acme.com:389",
+    "samlEntityId": "https://acme.com/saml",
+    "samlSsoUrl": "https://sso.acme.com/login"
+  },
+  "policies": {
+    "requireApprovalFor": ["write_file", "patch_file", "run_shell_command"],
+    "strictness": "balanced",
+    "budgetCapUsd": 2.0,
+    "blockedShellPatterns": ["rm -rf", "format c:", "DROP TABLE"],
+    "allowedWriteExtensions": [".ts", ".tsx", ".js", ".jsx", ".json", ".md"]
+  },
+  "auditRetentionDays": 90
+}

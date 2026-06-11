@@ -5,13 +5,29 @@ import MessageList, { type Message } from '../components/MessageList.tsx';
 import InputBox from '../components/InputBox.tsx';
 import StatusBar from '../components/StatusBar.tsx';
 import { runTurn, type ConversationMessage } from '../../agent/runner.ts';
-import { getActiveModelLabel, loadConfig, reloadConfig } from '../../config/index.ts';
+import { getActiveModelLabel, loadConfig } from '../../config/index.ts';
 import { parseSlashCommand, buildHelpMessage } from '../slashCommands.ts';
 import { undoStack } from '../../session/undoStack.ts';
 import { saveSession, loadLastSession, generateSessionId } from '../../session/store.ts';
-import { getSecuritySummary, logSecurityEvent } from '../../security/eventLog.ts'; // zex: added for security-layer
-import { auditProject } from '../../security/projectAudit.ts'; // zex: added for security-layer
-import { join } from 'node:path';
+import { getSecuritySummary, logSecurityEvent, securityLog } from '../../security/eventLog.ts';
+import { auditProject } from '../../security/projectAudit.ts';
+import { buildContextReport } from '../../context/status.ts';
+import { metrics } from '../../session/metrics.ts';
+import { remember, recall, clusterMemories } from '../../session/memory.ts';
+import { budgetTracker } from '../../session/budget.ts';
+import { exportSessionMarkdown } from '../../session/export.ts';
+import { dualCache } from '../../cache/index.ts';
+import { startFileWatcher } from '../../utils/fileWatcher.ts';
+import { gc } from '../../agent/gcState.ts';
+import { parseIntent } from '../../agent/intent.ts';
+import { executeDAG } from '../../agent/orchestrator.ts';
+import { collaborativeDebug } from '../../agent/collabDebug.ts';
+import type { RunnerCallbacks } from '../../agent/runner.ts';
+import { auditDependencies, formatDepAudit } from '../../security/depAudit.ts';
+import { ensureAuthenticated, authenticate, formatAuthStatus } from '../../enterprise/auth.ts';
+import { formatOrgSummary } from '../../enterprise/orgConfig.ts';
+import { formatAuditSummary, setAuditSession } from '../../enterprise/auditLog.ts';
+import { exportFineTuneDataset } from '../../enterprise/fineTuneExport.ts';
 
 let msgCounter = 0;
 const nextId = () => String(++msgCounter);
@@ -33,6 +49,9 @@ export default function ChatScreen() {
   const [planMode, setPlanMode]       = useState(false);
   const [logsEnabled, setLogsEnabled] = useState(false);
   const [keyPoolSummary, setKeyPoolSummary] = useState<string | undefined>(undefined);
+  const [cacheHitRate, setCacheHitRate] = useState(0);
+  const [debugMode, setDebugMode] = useState(false);
+  const [budgetWarning, setBudgetWarning] = useState(false);
   const [sessionId] = useState(() => generateSessionId());
 
   const [pendingTool, setPendingTool] = useState<{
@@ -45,16 +64,24 @@ export default function ChatScreen() {
   const historyRef     = useRef<ConversationMessage[]>([]);
   const auditDone      = useRef(false); // zex: added for security-layer
 
-  // ── Project Security Audit (zex: added for security-layer) ──────────────────
+  // ── Startup: security audit, file watcher, GC background eviction ─────────
   useEffect(() => {
     if (auditDone.current) return;
     auditDone.current = true;
 
-    async function runAudit() {
+    async function startup() {
+      setAuditSession(sessionId);
+      budgetTracker.syncFromOrg();
+
+      const auth = await ensureAuthenticated();
+      if (!auth.ok) {
+        setMessages([{ id: nextId(), role: 'system', content: `🔐 ${auth.message}` }]);
+      } else {
+        setMessages([{ id: nextId(), role: 'system', content: `✓ ${formatAuthStatus()}` }]);
+      }
+
       const root = process.cwd();
       const context = await auditProject(root);
-
-      // Log existing findings to the security log
       for (const finding of context.existingFindings) {
         logSecurityEvent({
           turn: 0,
@@ -65,10 +92,27 @@ export default function ChatScreen() {
           timestamp: new Date(),
         });
       }
+
+      const depResult = await auditDependencies(root);
+      if (depResult.findings.length > 0) {
+        setMessages(prev => [...prev, {
+          id: nextId(), role: 'system',
+          content: `📦 Dependency audit:\n${formatDepAudit(depResult)}`,
+        }]);
+      }
+
+      const clustered = clusterMemories();
+      if (clustered > 0) {
+        setMessages(prev => [...prev, {
+          id: nextId(), role: 'system', content: `🧠 Merged ${clustered} duplicate memory clusters on startup.`,
+        }]);
+      }
     }
 
-    runAudit();
-  }, []);
+    startup();
+    startFileWatcher(process.cwd());
+    gc.startBackgroundEviction();
+  }, [sessionId]);
 
   // ── Tool permission gate (Y / n) ────────────────────────────────────────────
   useInput((input, key) => {
@@ -159,6 +203,161 @@ export default function ChatScreen() {
         const result = undoStack.undo();
         setMessages(prev => [...prev, {
           id: systemId, role: 'system', content: `↩ Undone: ${result}`,
+        }]);
+        break;
+      }
+
+      case 'redo': {
+        const result = undoStack.redo();
+        setMessages(prev => [...prev, {
+          id: systemId,
+          role: 'system',
+          content: result ? `↪ Redone: ${result}` : '⚠ Nothing to redo.',
+        }]);
+        break;
+      }
+
+      case 'context': {
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system', content: buildContextReport(historyRef.current),
+        }]);
+        break;
+      }
+
+      case 'stats': {
+        const statsText = result.budget
+          ? `${metrics.formatStats()}\n\n${budgetTracker.formatReport()}`
+          : metrics.formatStats();
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system', content: statsText,
+        }]);
+        setCacheHitRate(dualCache.getHitRate());
+        break;
+      }
+
+      case 'cache-clear': {
+        dualCache.clear();
+        setCacheHitRate(0);
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system', content: '🗑 Response cache cleared.',
+        }]);
+        break;
+      }
+
+      case 'remember': {
+        const entry = remember(result.text);
+        const clustered = clusterMemories();
+        const clusterNote = clustered > 0 ? ` (merged ${clustered} duplicate clusters)` : '';
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system', content: `💾 Remembered: "${entry.text}"${clusterNote}`,
+        }]);
+        break;
+      }
+
+      case 'recall': {
+        const hits = recall(result.query || 'recent');
+        const text = hits.length === 0
+          ? 'No matching memories found.'
+          : hits.map((h) => `  • ${h.text}`).join('\n');
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system', content: `🧠 Memories:\n${text}`,
+        }]);
+        break;
+      }
+
+      case 'export': {
+        const path = exportSessionMarkdown(historyRef.current, sessionId);
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system', content: `📄 Exported to ${path}`,
+        }]);
+        break;
+      }
+
+      case 'export-finetune': {
+        const path = exportFineTuneDataset(historyRef.current, sessionId);
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system', content: `🎯 Fine-tune dataset exported to ${path}`,
+        }]);
+        break;
+      }
+
+      case 'deps': {
+        auditDependencies(process.cwd()).then((r) => {
+          setMessages(prev => [...prev, {
+            id: systemId, role: 'system', content: formatDepAudit(r),
+          }]);
+        });
+        break;
+      }
+
+      case 'cluster': {
+        const n = clusterMemories();
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system',
+          content: n > 0 ? `🧠 Merged ${n} duplicate memory clusters.` : 'No duplicate memories to merge.',
+        }]);
+        break;
+      }
+
+      case 'debug':
+        setDebugMode(prev => {
+          const next = !prev;
+          setMessages(m => [...m, {
+            id: systemId, role: 'system',
+            content: next
+              ? '🔍 Collaborative debug mode ON — agents vote on fixes.'
+              : '🔍 Collaborative debug mode OFF.',
+          }]);
+          return next;
+        });
+        break;
+
+      case 'org': {
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system', content: `${formatOrgSummary()}\n\n${formatAuthStatus()}`,
+        }]);
+        break;
+      }
+
+      case 'audit': {
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system', content: formatAuditSummary(30),
+        }]);
+        break;
+      }
+
+      case 'login': {
+        const parts = result.args.split(/\s+/);
+        const [user, pass] = parts;
+        authenticate({ username: user, password: pass, token: result.args }).then((s) => {
+          setMessages(prev => [...prev, {
+            id: systemId, role: 'system',
+            content: s ? `✓ Logged in as ${s.email}` : '✗ Authentication failed.',
+          }]);
+        });
+        break;
+      }
+
+      case 'reset':
+        historyRef.current = [];
+        setMessages([]);
+        setTokenCount(0);
+        setMessages([{ id: nextId(), role: 'system', content: '🔄 Session reset.' }]);
+        break;
+
+      case 'config': {
+        const cfg = loadConfig();
+        const lines = [
+          'Current config:',
+          `  provider: ${cfg.provider.provider}`,
+          `  model:    ${cfg.provider.model}`,
+          `  maxTokens: ${cfg.provider.maxTokens}`,
+          `  temperature: ${cfg.provider.temperature}`,
+          '',
+          'Edit ~/.zex/config.json to change settings.',
+        ];
+        setMessages(prev => [...prev, {
+          id: systemId, role: 'system', content: lines.join('\n'),
         }]);
         break;
       }
@@ -273,9 +472,11 @@ export default function ChatScreen() {
 
       let fullResponse = '';
 
-      try {
-        const finalHistory = await runTurn(historyRef.current, messageToSend, {
-          onDelta(text) {
+      const intent = parseIntent(trimmed);
+      const useMultiAgent = loadConfig().multiAgent === true;
+
+      const runCallbacks: RunnerCallbacks = {
+          onDelta(text: string) {
             fullResponse += text;
             setMessages(prev =>
               prev.map(m =>
@@ -284,11 +485,11 @@ export default function ChatScreen() {
             );
           },
 
-          onUsage(inputTokens, outputTokens) {
+          onUsage(inputTokens: number, outputTokens: number) {
             setTokenCount(n => n + inputTokens + outputTokens);
           },
 
-          onError(message, _code) {
+          onError(message: string, _code?: string) {
             setMessages(prev =>
               prev.map(m =>
                 m.id === assistantMsgId
@@ -298,9 +499,9 @@ export default function ChatScreen() {
             );
           },
 
-          onDone(_stopReason) {},
+          onDone(_stopReason: string) {},
 
-          onToolCall(name, args) {
+          onToolCall(name: string, args: Record<string, unknown>): Promise<boolean> {
             // Snapshot for undo BEFORE approval (file may not exist yet)
             if (name === 'write_file' && args.path) {
               const entry = undoStack.snapshot(args.path, name);
@@ -308,7 +509,7 @@ export default function ChatScreen() {
               // Interim: commit immediately (snapshot + placeholder commit)
               undoStack.commit(entry);
             }
-            return new Promise(resolve => {
+            return new Promise<boolean>(resolve => {
               setPendingTool({ name, args, resolve });
               setMessages(prev => [...prev, {
                  id: nextId(), role: 'assistant', content: `[Tool Call] ${name}`, isLog: true
@@ -316,14 +517,14 @@ export default function ChatScreen() {
             });
           },
 
-          onToolResult(name, result, isError) {
+          onToolResult(name: string, result: string, isError?: boolean) {
              const status = isError ? '✗ Error' : '✓ Result';
              setMessages(prev => [...prev, {
                id: nextId(), role: 'system', content: `[${status}] ${name}: ${String(result).substring(0, 80).replace(/\n/g, ' ')}...`, isLog: true
              }]);
           },
 
-          onKeyRotation(message) {
+          onKeyRotation(message: string) {
             const noticeId = nextId();
             setMessages(prev => [
               ...prev,
@@ -346,17 +547,51 @@ export default function ChatScreen() {
               { id: flagId, role: 'system', content: `🔒 Security-sensitive task detected: "${goal}"\nRun /security after this turn to review any flagged patterns.` },
             ]);
           },
-        });
+      };
+
+      try {
+        let finalHistory: ConversationMessage[];
+
+        if (debugMode || intent.action === 'debug') {
+          const collab = await collaborativeDebug(intent, messageToSend, historyRef.current, {
+            ...runCallbacks,
+            onAgentStart(agent, task) {
+              setMessages(prev => [...prev, {
+                id: nextId(), role: 'system', content: `🤖 ${agent}: ${task.slice(0, 80)}…`, isLog: true,
+              }]);
+            },
+            onVoteResult(summary) {
+              setMessages(prev => [...prev, {
+                id: nextId(), role: 'system', content: summary,
+              }]);
+            },
+          });
+          finalHistory = collab.history;
+        } else if (useMultiAgent && ['fix', 'refactor', 'plan', 'debug'].includes(intent.action)) {
+          const dagResult = await executeDAG(intent, messageToSend, historyRef.current, {
+            ...runCallbacks,
+            onAgentStart(agent, task) {
+              setMessages(prev => [...prev, {
+                id: nextId(), role: 'system', content: `🤖 ${agent}: ${task.slice(0, 80)}…`, isLog: true,
+              }]);
+            },
+          });
+          finalHistory = dagResult.history;
+        } else {
+          finalHistory = await runTurn(historyRef.current, messageToSend, runCallbacks);
+        }
 
         historyRef.current = finalHistory;
         saveSession(sessionId, finalHistory);
+        setCacheHitRate(dualCache.getHitRate());
+        setBudgetWarning(budgetTracker.warning || budgetTracker.isOverCap());
       } finally {
         streamingMsgId.current = null;
         setIsLoading(false);
         setModelLabel(getActiveModelLabel());
       }
     },
-    [isLoading, planMode, handleSlashCommand],
+    [isLoading, planMode, debugMode, handleSlashCommand, sessionId],
   );
 
   return (
@@ -426,6 +661,10 @@ export default function ChatScreen() {
         isLoading={isLoading}
         keyPoolSummary={keyPoolSummary}
         planMode={planMode}
+        debugMode={debugMode}
+        cacheHitRate={cacheHitRate}
+        budgetWarning={budgetWarning}
+        securityOk={securityLog.filter((e) => e.action === 'blocked').length === 0}
       />
     </Box>
   );

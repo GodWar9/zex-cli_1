@@ -37,3 +37,26 @@ export const DEFAULT_SYSTEM_PROMPT =
   'You are zex, a concise and precise AI coding assistant running in the terminal. ' +
   'Respond in plain text unless the user asks for code — then use markdown code blocks. ' +
   'Be direct. Do not add unnecessary caveats or filler.';
+
+/** Token budget allocation per spec §1.2 */
+export const DEFAULT_TOKEN_BUDGET = {
+  maxTokens: 128_000,
+  reserved: {
+    outputBuffer: 8_000,
+    toolResults: 16_000,
+    safetyMargin: 4_000,
+  },
+  allocation: {
+    history: 30_000,
+    crossFile: 20_000,
+    memory: 5_000,
+    openFiles: 25_000,
+    currentTask: 20_000,
+  },
+  get available(): number {
+    const reserved = this.reserved.outputBuffer + this.reserved.toolResults + this.reserved.safetyMargin;
+    return this.maxTokens - reserved;
+  },
+} as const;
+
+export const DEFAULT_MIN_RECENCY_WINDOW_SEC = 600;

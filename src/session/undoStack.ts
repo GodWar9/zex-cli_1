@@ -17,6 +17,7 @@ export interface UndoEntry {
 
 class UndoStack {
   private stack: UndoEntry[] = [];
+  private redoStack: UndoEntry[] = [];
 
   /**
    * Call this BEFORE a file write happens to snapshot the previous state.
@@ -45,6 +46,7 @@ class UndoStack {
       entry.newContent = '';
     }
     this.stack.push(entry);
+    this.redoStack = []; // new write clears redo history
     if (this.stack.length > MAX_UNDO_DEPTH) {
       this.stack.shift(); // drop oldest
     }
@@ -59,19 +61,45 @@ class UndoStack {
     if (!entry) return null;
 
     try {
+      // Snapshot current state for redo before reverting
+      let currentContent: string | null = null;
+      if (existsSync(entry.filePath)) {
+        currentContent = readFileSync(entry.filePath, 'utf-8');
+      }
+      this.redoStack.push({ ...entry, previousContent: currentContent, newContent: entry.newContent });
+
       if (entry.previousContent === null) {
-        // File was created by the agent — delete it
         const { unlinkSync } = require('node:fs');
         unlinkSync(entry.filePath);
         return `Deleted ${entry.filePath} (it was created by the agent)`;
       } else {
-        // File existed before — restore previous content
         writeFileSync(entry.filePath, entry.previousContent, 'utf-8');
         return `Restored ${entry.filePath} to its state before the last ${entry.toolName}`;
       }
     } catch (e: any) {
       return `Failed to undo ${entry.filePath}: ${e.message}`;
     }
+  }
+
+  redo(): string | null {
+    const entry = this.redoStack.pop();
+    if (!entry) return null;
+
+    try {
+      if (entry.previousContent === null && !existsSync(entry.filePath)) {
+        writeFileSync(entry.filePath, entry.newContent, 'utf-8');
+      } else {
+        writeFileSync(entry.filePath, entry.newContent, 'utf-8');
+      }
+      this.stack.push(entry);
+      return `Redid ${entry.toolName} on ${entry.filePath}`;
+    } catch (e: any) {
+      return `Failed to redo ${entry.filePath}: ${e.message}`;
+    }
+  }
+
+  get redoDepth(): number {
+    return this.redoStack.length;
   }
 
   /** Number of undoable operations in the stack */

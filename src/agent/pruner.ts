@@ -10,6 +10,7 @@
 //   'continuation'  — Follow-up user message. Send core + tools that are active.
 
 import type { ConversationMessage } from './types.ts';
+import { countTokens } from '../utils/tokens.ts';
 import {
   CORE_SEGMENT,
   COLLECTOR_SEGMENT,
@@ -106,10 +107,7 @@ export function buildPrunedSystemPrompt(
   return segments.join('\n\n').trim();
 }
 
-/**
- * Estimate the token count of a string (rough: 1 token ≈ 4 chars for English).
- * Used for logging / status display — not for hard budget enforcement.
- */
+/** Exact token count via js-tiktoken. */
 export function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
+  return countTokens(text);
 }

@@ -11,8 +11,12 @@ type Props = {
   model?: string;
   tokenCount?: number;
   isLoading?: boolean;
-  keyPoolSummary?: string; // e.g. "14/16 keys"
+  keyPoolSummary?: string;
   planMode?: boolean;
+  debugMode?: boolean;
+  cacheHitRate?: number;
+  budgetWarning?: boolean;
+  securityOk?: boolean;
 };
 
 function getCwd(): string {
@@ -57,6 +61,10 @@ export default function StatusBar({
   isLoading = false,
   keyPoolSummary,
   planMode = false,
+  debugMode = false,
+  cacheHitRate = 0,
+  budgetWarning = false,
+  securityOk = true,
 }: Props): React.ReactElement {
   const { stdout } = useStdout();
   const width = stdout?.columns ?? 80;
@@ -77,7 +85,13 @@ export default function StatusBar({
           {' zex '}
         </Text>
         {planMode && (
-          <Text color={theme.colors.warning} bold> 📋 PLAN MODE</Text>
+          <Text color={theme.colors.warning} bold> 📋 PLAN</Text>
+        )}
+        {debugMode && (
+          <Text color={theme.colors.warning} bold> 🔍 DEBUG</Text>
+        )}
+        {budgetWarning && (
+          <Text color={theme.colors.error} bold> 💰 LOW</Text>
         )}
       </Box>
 
@@ -93,10 +107,16 @@ export default function StatusBar({
         )}
       </Box>
 
-      {/* RIGHT — token budget bar + cwd */}
+      {/* RIGHT — tokens, cache, security, cwd */}
       <Box>
         {tokenCount > 0 && <TokenBudgetBar used={tokenCount} />}
-        <Text color={theme.colors.dim}>  {displayCwd} </Text>
+        {cacheHitRate > 0 && (
+          <Text color={theme.colors.dim}> · Cache {Math.round(cacheHitRate * 100)}% </Text>
+        )}
+        <Text color={securityOk ? theme.colors.success : theme.colors.warning}>
+          {' '}· Sec {securityOk ? 'OK' : '!'} 
+        </Text>
+        <Text color={theme.colors.dim}> {displayCwd} </Text>
       </Box>
 
     </Box>

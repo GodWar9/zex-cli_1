@@ -62,7 +62,10 @@ function buildConfig(user: UserConfig): ZexConfig {
     systemPrompt,
   };
 
-  return { provider: providerConfig };
+  return {
+    provider: providerConfig,
+    multiAgent: user.multiAgent ?? false,
+  };
 }
 
 export function loadConfig(): ZexConfig {

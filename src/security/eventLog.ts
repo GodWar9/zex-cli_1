@@ -3,6 +3,8 @@
 // Singleton — safe to import anywhere.
 
 import type { SecurityFinding } from './scanner.ts';
+import { writeAudit } from '../enterprise/auditLog.ts';
+import { metrics } from '../session/metrics.ts';
 
 export interface SecurityEvent {
   turn: number;
@@ -19,6 +21,24 @@ export const securityLog: SecurityEvent[] = [];
 /** Append a new event to the session log */
 export function logSecurityEvent(event: SecurityEvent): void {
   securityLog.push(event);
+
+  if (event.action === 'blocked') metrics.writesBlocked++;
+  if (event.finding.severity === 'critical' || event.finding.severity === 'high') {
+    metrics.vulnerabilitiesFound++;
+  }
+
+  writeAudit({
+    category: 'security',
+    action: event.action,
+    resource: event.file,
+    details: {
+      tool: event.tool,
+      label: event.finding.label,
+      line: event.finding.lineNumber,
+      severity: event.finding.severity,
+    },
+    severity: event.action === 'blocked' ? 'critical' : event.action === 'warned' ? 'warning' : 'info',
+  });
 }
 
 /** Turn counter — incremented by the runner so events have context */
