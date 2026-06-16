@@ -72,7 +72,7 @@ Security is not an afterthought. Every interaction is gated by a multi-tier secu
 
 #### Prerequisites
 - Node.js 18+ or Bun
-- One or more Gemini API Keys
+- Multiple Gemini API Keys
 
 #### Installation
 ```bash
