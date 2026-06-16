@@ -503,8 +503,8 @@ export default function ChatScreen() {
 
           onToolCall(name: string, args: Record<string, unknown>): Promise<boolean> {
             // Snapshot for undo BEFORE approval (file may not exist yet)
-            if (name === 'write_file' && args.path) {
-              const entry = undoStack.snapshot(args.path, name);
+            if (name === 'write_file' && args['path']) {
+              const entry = undoStack.snapshot(args['path'] as string, name);
               // We'll commit after execution — but we don't have a post-execute hook here yet.
               // Interim: commit immediately (snapshot + placeholder commit)
               undoStack.commit(entry);

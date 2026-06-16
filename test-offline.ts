@@ -308,14 +308,14 @@ try {
 
   const compressed = compressHistory(mockHistory);
   
-  if (compressed[2].role === 'tool' && compressed[2].content.includes('[Compressed:')) {
+  if (compressed[2]?.role === 'tool' && compressed[2]?.content?.includes('[Compressed:')) {
     ok('compressHistory successfully compresses tools older than 2 turns');
   } else {
-    fail('compressHistory failed to compress old turn', `Got: ${compressed[2].content.slice(0, 50)}`);
+    fail('compressHistory failed to compress old turn', `Got: ${compressed[2]?.content?.slice(0, 50)}`);
   }
 
   const recentTool = compressed.find((m, i) => i > 2 && m.role === 'tool' && m.toolCallId === '2');
-  if (recentTool && recentTool.content.length === 1000) {
+  if (recentTool && recentTool.content && recentTool.content.length === 1000) {
     ok('compressHistory leaves recent tool results intact');
   } else {
     fail('compressHistory compressed a recent turn incorrectly', '');
@@ -329,7 +329,7 @@ try {
     { role: 'user', content: 'Turn 3' },
   ];
   const compressedSmall = compressHistory(mockHistorySmall);
-  if (compressedSmall[1].content === 'small payload') {
+  if (compressedSmall[1] && compressedSmall[1].content === 'small payload') {
     ok('compressHistory leaves small payloads intact even if old');
   } else {
     fail('compressHistory incorrectly compressed a small payload', '');

@@ -11,7 +11,7 @@ import { getAuthSession } from './auth.ts';
 const AUDIT_DIR = join(homedir(), '.zex', 'audit');
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB per file
 
-let _sessionId = randomUUID();
+let _sessionId: string = randomUUID();
 let _turn = 0;
 
 export function setAuditSession(sessionId: string): void {
