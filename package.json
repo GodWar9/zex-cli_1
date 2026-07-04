@@ -14,7 +14,7 @@
     "url": "git+https://github.com/zex-cli/zex.git"
   },
   "scripts": {
-    "postinstall": "node -e \"const fs=require('fs'); if(!fs.existsSync('node_modules/ink/package.json')) { console.error('\\n⚠ node_modules incomplete — run: npm install\\n'); process.exit(1); }\"",
+    "postinstall": "node -e \"const fs=require('fs'); const paths=['node_modules/ink/package.json','packages/cli/node_modules/ink/package.json']; if(!paths.some(p=>fs.existsSync(p))){console.error('\\n⚠ node_modules incomplete — run: npm install\\n');process.exit(1)}\"",
     "dev": "bun run packages/cli/src/index.tsx",
     "start": "bun run packages/cli/src/index.tsx",
     "build": "bun build packages/cli/src/index.tsx --compile --outfile dist/zex",
