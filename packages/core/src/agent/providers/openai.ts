@@ -93,14 +93,28 @@ export class OpenAICompatibleProvider implements LLMProvider {
       config.systemPrompt ??
       'You are zex, an AI coding assistant. Be concise, precise and helpful.';
 
-    const oaiMessages: OpenAI.ChatCompletionMessageParam[] = [
+    type OaiMsg =
+      | OpenAI.ChatCompletionSystemMessageParam
+      | OpenAI.ChatCompletionUserMessageParam
+      | OpenAI.ChatCompletionAssistantMessageParam;
+    const oaiMessages: OaiMsg[] = [
       { role: 'system', content: systemPrompt },
       ...messages
         .filter((m) => m.role !== 'system')
-        .map((m) => ({
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-        })),
+        .map((m): OaiMsg => {
+          const role = m.role as 'user' | 'assistant';
+          if (m.parts && role === 'user') {
+            return {
+              role: 'user',
+              content: m.parts.map(p => {
+                if (p.type === 'text') return { type: 'text', text: p.text } as const;
+                if (p.type === 'image') return { type: 'image_url' as const, image_url: { url: `data:${p.mimeType};base64,${p.data}` } };
+                return { type: 'text', text: '' } as const;
+              }),
+            };
+          }
+          return { role, content: m.content };
+        }),
     ];
 
     try {

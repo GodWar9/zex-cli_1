@@ -1,10 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Box, Text, useInput, useStdout } from 'ink';
 import { theme } from '../theme.ts';
-import { parseFileRefs, formatRefsSummary } from '../../../../core/src/utils/fileRefs.ts';
+import { parseFileRefs, formatRefsSummary, parseImageRefs } from '../../../../core/src/utils/fileRefs.ts';
+import type { ImageAttachment } from '../../../../core/src/utils/fileRefs.ts';
+
+export type { ImageAttachment };
 
 type Props = {
-  onSubmit: (value: string) => void;
+  onSubmit: (value: string, images?: ImageAttachment[]) => void;
   isLoading?: boolean;
   placeholder?: string;
 };
@@ -44,6 +47,10 @@ export default function InputBox({
   const [refSummary, setRefSummary] = useState<string>('');
   const [refCount, setRefCount]     = useState<number>(0);
 
+  // @img reference state
+  const [imgSummary, setImgSummary] = useState<string>('');
+  const [imgCount, setImgCount]     = useState<number>(0);
+
   // History
   const historyRef    = useRef<string[]>([]);
   const historyIdxRef = useRef<number>(-1);
@@ -60,7 +67,20 @@ export default function InputBox({
 
     // Parse @file refs and build the augmented prompt
     const parsed = parseFileRefs(text);
-    const finalText = parsed.augmentedPrompt; // includes file context blocks
+    let finalText = parsed.augmentedPrompt; // includes file context blocks
+
+    // Parse @img refs — strip them from text and collect binary attachments
+    const { attachments: imgAttachments, cleanMessage: imgClean, failed: failedImgs } = parseImageRefs(parsed.cleanMessage);
+
+    // Rebuild augmented prompt without @img tokens
+    if (imgAttachments.length > 0 || failedImgs.length > 0) {
+      // Re-parse file refs without the @img tokens
+      const reParsed = parseFileRefs(imgClean);
+      finalText = reParsed.augmentedPrompt;
+      if (failedImgs.length > 0) {
+        finalText = `[Could not load images: ${failedImgs.join(', ')}]\n\n${finalText}`;
+      }
+    }
 
     const history = historyRef.current;
     if (history[history.length - 1] !== text) {
@@ -72,7 +92,8 @@ export default function InputBox({
     draftRef.current = [''];
     setRefSummary('');
     setRefCount(0);
-    onSubmit(finalText);
+    setImgSummary('');
+    onSubmit(finalText, imgAttachments.length > 0 ? imgAttachments : undefined);
     setLines(['']);
     setCursor({ line: 0, col: 0 });
   }, [onSubmit]);
@@ -83,11 +104,20 @@ export default function InputBox({
     if (!text.includes('@')) {
       setRefSummary('');
       setRefCount(0);
+      setImgSummary('');
+      setImgCount(0);
       return;
     }
     const parsed = parseFileRefs(text);
     setRefSummary(formatRefsSummary(parsed.refs));
     setRefCount(parsed.refs.length);
+
+    // Parse @img refs for display
+    const { attachments: imgAttachments, failed } = parseImageRefs(text);
+    const imgParts = imgAttachments.map(a => a.displayName);
+    if (failed.length > 0) imgParts.push(`⚠${failed.length} failed`);
+    setImgSummary(imgParts.length > 0 ? '📷 ' + imgParts.join(', ') : '');
+    setImgCount(imgAttachments.length);
   }, [lines]);
 
   // ── Input handler ─────────────────────────────────────────────────────────
@@ -305,6 +335,14 @@ export default function InputBox({
             <Box marginTop={0} marginLeft={2}>
               <Text color="green">{refSummary}</Text>
               <Text color={theme.colors.dim}>  will be sent as context</Text>
+            </Box>
+          )}
+
+          {/* Image attachment pill bar */}
+          {imgCount > 0 && (
+            <Box marginTop={0} marginLeft={2}>
+              <Text color="cyan">{imgSummary}</Text>
+              <Text color={theme.colors.dim}>  attached as image</Text>
             </Box>
           )}
 

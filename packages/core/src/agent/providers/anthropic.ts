@@ -55,10 +55,17 @@ export class AnthropicProvider implements LLMProvider {
         max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
         system: systemPrompt,
         temperature: config.temperature,
-        messages: chatMsgs.map((m) => ({
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-        })),
+        messages: chatMsgs.map((m) => {
+          if (m.parts) {
+            const multiContent: Anthropic.Messages.MessageParam["content"] = m.parts.map(p => {
+              if (p.type === 'text') return { type: 'text', text: p.text };
+              if (p.type === 'image') return { type: 'image', source: { type: 'base64', media_type: p.mimeType as any, data: p.data } };
+              return { type: 'text', text: '' };
+            });
+            return { role: m.role as 'user' | 'assistant', content: multiContent };
+          }
+          return { role: m.role as 'user' | 'assistant', content: m.content };
+        }),
       });
 
       for await (const event of stream) {

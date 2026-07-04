@@ -2,7 +2,7 @@
 
 import { streamResponse } from './stream.ts';
 import { loadConfig } from '../config/index.ts';
-import type { ConversationMessage, StreamChunk, ToolCallPayload } from './types.ts';
+import type { ConversationMessage, ContentPart, StreamChunk, ToolCallPayload } from './types.ts';
 import { getTool } from '../tools/index.ts';
 
 import { compressHistory } from './gc.ts';
@@ -25,6 +25,12 @@ import { setAuditTurn, writeAudit } from '../enterprise/auditLog.ts';
 import { checkToolPolicy } from '../enterprise/policies.ts';
 
 export type { ConversationMessage };
+
+export interface ImageAttachmentData {
+  mimeType: string;
+  base64: string;
+  displayName: string;
+}
 
 export interface RunnerCallbacks {
   /** Called for each text token as it arrives — use to update streaming message */
@@ -74,6 +80,7 @@ export async function runTurn(
   callbacks: RunnerCallbacks,
   agentRole?: AgentRole,
   modelOverride?: string,
+  attachments?: ImageAttachmentData[],
 ): Promise<ConversationMessage[]> {
   incrementTurn();
   setAuditTurn(getCurrentTurn());
@@ -157,10 +164,21 @@ export async function runTurn(
   if (styleBlock) systemInjections.push({ role: 'system', content: styleBlock });
   if (memoryBlock) systemInjections.push({ role: 'system', content: memoryBlock });
 
+  const userMessage: ConversationMessage = (attachments && attachments.length > 0)
+    ? {
+        role: 'user',
+        content: effectiveUserMsg,
+        parts: [
+          { type: 'text', text: effectiveUserMsg } as ContentPart,
+          ...attachments.map(a => ({ type: 'image', mimeType: a.mimeType, data: a.base64 } as ContentPart)),
+        ],
+      }
+    : { role: 'user', content: effectiveUserMsg };
+
   const messages: ConversationMessage[] = [
     ...prunedHistory,
     ...systemInjections,
-    { role: 'user', content: effectiveUserMsg },
+    userMessage,
   ];
 
   let totalInputTokens = 0;

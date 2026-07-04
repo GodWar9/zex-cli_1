@@ -199,3 +199,85 @@ export function formatRefsSummary(refs: FileReference[]): string {
     return `${name}:${r.startLine}–${r.endLine}`;
   }).join(' · ');
 }
+
+// ─── Image attachment support ────────────────────────────────────────────────
+// Parses @img:path references typed in the InputBox.
+//
+// Syntax:
+//   @img:screenshot.png        → relative path
+//   @img:C:\path\to\img.png    → absolute path
+//
+// Images are read as binary, base64-encoded, and returned as ImageAttachment
+// objects that providers can convert to their native multi-modal format.
+
+const IMAGE_EXT_MIME: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.bmp': 'image/bmp',
+};
+
+const IMG_REF_PATTERN = /@img:([\w./\-\\: ]+?)(?=\s|$|[,;!?])/g;
+
+export interface ImageAttachment {
+  /** The raw token matched, e.g. "@img:screenshot.png" */
+  raw: string;
+  /** Resolved absolute file path */
+  path: string;
+  /** MIME type like "image/png" */
+  mimeType: string;
+  /** base64-encoded binary data */
+  base64: string;
+  /** Display-friendly file name */
+  displayName: string;
+}
+
+/**
+ * Parse all @img: references in a message, read the image files,
+ * and return base64-encoded attachment data.
+ */
+export function parseImageRefs(
+  message: string,
+  cwd: string = process.cwd(),
+): { attachments: ImageAttachment[]; cleanMessage: string; failed: string[] } {
+  const attachments: ImageAttachment[] = [];
+  const failed: string[] = [];
+  let cleanMessage = message;
+
+  const matches = [...message.matchAll(IMG_REF_PATTERN)];
+
+  for (const match of matches) {
+    const raw = match[0];
+    const filePart = match[1]!;
+
+    const resolved = resolveFilePath(filePart, cwd);
+    if (!resolved) {
+      failed.push(raw);
+      continue;
+    }
+
+    const ext = extname(resolved).toLowerCase();
+    const mimeType = IMAGE_EXT_MIME[ext];
+    if (!mimeType) {
+      failed.push(raw);
+      continue;
+    }
+
+    const data = readFileSync(resolved);
+    const base64 = data.toString('base64');
+
+    attachments.push({
+      raw,
+      path: resolved,
+      mimeType,
+      base64,
+      displayName: basename(resolved),
+    });
+
+    cleanMessage = cleanMessage.replace(raw, '').trim();
+  }
+
+  return { attachments, cleanMessage, failed };
+}

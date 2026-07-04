@@ -116,7 +116,14 @@ export class GeminiProvider implements LLMProvider {
         const m = chatMessages[i];
         if (!m) continue;
         if (m.role === 'user') {
-            history.push({ role: 'user', parts: [{ text: m.content }] });
+            const userParts = m.parts
+              ? m.parts.map(p => {
+                  if (p.type === 'text') return { text: p.text };
+                  if (p.type === 'image') return { inlineData: { mimeType: p.mimeType, data: p.data } };
+                  return { text: '' };
+                })
+              : [{ text: m.content }];
+            history.push({ role: 'user', parts: userParts });
         } else if (m.role === 'assistant') {
             const parts: any[] = [];
             if (m.content) parts.push({ text: m.content });
@@ -148,7 +155,13 @@ export class GeminiProvider implements LLMProvider {
     
     let sendParts: any[] = [];
     if (lastMessage && lastMessage.role === 'user') {
-        sendParts = [{ text: lastMessage.content }];
+        sendParts = lastMessage.parts
+          ? lastMessage.parts.map(p => {
+              if (p.type === 'text') return { text: p.text };
+              if (p.type === 'image') return { inlineData: { mimeType: p.mimeType, data: p.data } };
+              return { text: '' };
+            })
+          : [{ text: lastMessage.content }];
     } else if (lastMessage && lastMessage.role === 'tool') {
          sendParts = [{
             functionResponse: {

@@ -9,9 +9,27 @@ export interface ToolCallPayload {
   originalPart?: any;
 }
 
+// ─── Multi-modal content parts ─────────────────────────────────────────────
+
+export interface TextPart {
+  type: 'text';
+  text: string;
+}
+
+export interface ImagePart {
+  type: 'image';
+  mimeType: string;
+  /** base64-encoded image data */
+  data: string;
+}
+
+export type ContentPart = TextPart | ImagePart;
+
 export interface ConversationMessage {
   role: Role;
   content: string;
+  /** Multi-modal parts — when present, providers use these instead of plain content */
+  parts?: ContentPart[];
   toolCalls?: ToolCallPayload[]; // When role = 'assistant' and requesting a tool
   toolCallId?: string;           // When role = 'tool', correlates to the request
   name?: string;                 // When role = 'tool', name of the tool

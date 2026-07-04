@@ -458,7 +458,7 @@ export default function ChatScreen() {
 
   // ── Main submit handler ──────────────────────────────────────────────────────
   const handleSubmit = useCallback(
-    async (input: string) => {
+    async (input: string, images?: { mimeType: string; base64: string; displayName: string }[]) => {
       if (isLoading) return;
 
       const trimmed = input.trim();
@@ -588,7 +588,7 @@ export default function ChatScreen() {
           });
           finalHistory = dagResult.history;
         } else {
-          finalHistory = await runTurn(historyRef.current, messageToSend, runCallbacks);
+          finalHistory = await runTurn(historyRef.current, messageToSend, runCallbacks, undefined, undefined, images);
         }
 
         historyRef.current = finalHistory;
