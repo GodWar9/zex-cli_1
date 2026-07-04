@@ -3,13 +3,13 @@
 // Verifies schedulers, token budgeting, key pools, failover classification,
 // and the Bun.serve REST / WebSocket backend.
 
-import { AdvancedTokenizer } from "./src/llm/tokenizer.ts";
-import { CostCalculator } from "./src/llm/costCalculator.ts";
-import { AdvancedScheduler, type ScheduledTask } from "./src/llm/advancedScheduler.ts";
-import { PredictiveScheduler } from "./src/llm/predictiveScheduler.ts";
-import { LLMProviderFactory } from "./src/llm/providers.ts";
-import { TokenBudgetManager, LLMMonitor, FailureHandler, ZexLLMOrchestrator, FailureType } from "./src/llm/orchestrator.ts";
-import { server, orchestrator } from "./src/api/server.ts";
+import { AdvancedTokenizer } from "./packages/core/src/llm/tokenizer.ts";
+import { CostCalculator } from "./packages/core/src/llm/costCalculator.ts";
+import { AdvancedScheduler, type ScheduledTask } from "./packages/core/src/llm/advancedScheduler.ts";
+import { PredictiveScheduler } from "./packages/core/src/llm/predictiveScheduler.ts";
+import { LLMProviderFactory } from "./packages/core/src/llm/providers.ts";
+import { TokenBudgetManager, LLMMonitor, FailureHandler, ZexLLMOrchestrator, FailureType } from "./packages/core/src/llm/orchestrator.ts";
+import { server, orchestrator } from "./packages/cli/src/api/server.ts";
 
 const GREEN  = '\x1b[32m';
 const RED    = '\x1b[31m';

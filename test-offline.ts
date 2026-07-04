@@ -3,9 +3,9 @@
 // Tests all tools and the pruner WITHOUT making any API calls.
 // Safe to run anytime — no tokens burned.
 
-import { availableTools, getTool } from './src/tools/index.ts';
-import { classifyTurnType, buildPrunedSystemPrompt, estimateTokens } from './src/agent/pruner.ts';
-import type { ConversationMessage } from './src/agent/types.ts';
+import { availableTools, getTool } from './packages/core/src/tools/index.ts';
+import { classifyTurnType, buildPrunedSystemPrompt, estimateTokens } from './packages/core/src/agent/pruner.ts';
+import type { ConversationMessage } from './packages/core/src/agent/types.ts';
 
 const GREEN  = '\x1b[32m';
 const RED    = '\x1b[31m';
@@ -63,7 +63,7 @@ const listTool = getTool('list_directory')!;
 
 // Test 1: List the src/ directory
 try {
-  const result = await listTool.execute({ path: './src', max_depth: 3 });
+  const result = await listTool.execute({ path: './packages/core/src', max_depth: 3 });
   if (!result.isError && result.content.includes('tools') && result.content.includes('agent')) {
     ok('Lists src/ correctly', `${result.content.split('\n').length} lines returned`);
   } else {
@@ -104,7 +104,7 @@ const searchTool = getTool('search_files')!;
 
 // Test 1: Find a known term
 try {
-  const result = await searchTool.execute({ query: 'KeyPool', path: './src' });
+  const result = await searchTool.execute({ query: 'KeyPool', path: './packages/core/src' });
   if (!result.isError && result.content.includes('keyPool.ts')) {
     ok('Finds "KeyPool" in src/', `Results: ${result.content.split('\n').filter(l => l.includes('L')).length} matches`);
   } else {
@@ -116,7 +116,7 @@ try {
 
 // Test 2: No results — exclude .ts files to avoid matching the test file itself
 try {
-  const result = await searchTool.execute({ query: 'xyzzy_no_such_term_12345', path: './src' });
+  const result = await searchTool.execute({ query: 'xyzzy_no_such_term_12345', path: './packages/core/src' });
   if (!result.isError && result.content.includes('No matches')) {
     ok('Returns "No matches" for unknown term');
   } else {
@@ -128,7 +128,7 @@ try {
 
 // Test 3: Regex search
 try {
-  const result = await searchTool.execute({ query: 'export (const|function|class)', is_regex: true, path: './src/tools' });
+  const result = await searchTool.execute({ query: 'export (const|function|class)', is_regex: true, path: './packages/core/src/tools' });
   if (!result.isError && result.content.includes('📄')) {
     ok('Regex search works', `Found exports in tools/`);
   } else {
@@ -140,7 +140,7 @@ try {
 
 // Test 4: Extension filter
 try {
-  const result = await searchTool.execute({ query: 'import', path: './src/tools', file_types: '.ts' });
+  const result = await searchTool.execute({ query: 'import', path: './packages/core/src/tools', file_types: '.ts' });
   if (!result.isError) {
     ok('File type filter works (.ts only)');
   } else {
@@ -249,7 +249,7 @@ if (fullPrompt.includes('list_directory') && !loopbackPrompt.includes('list_dire
 section('Key Pool — Structure');
 
 try {
-  const { KeyPool } = await import('./src/agent/keyPool.ts');
+  const { KeyPool } = await import('./packages/core/src/agent/keyPool.ts');
   const pool = new KeyPool(['KEY_A', 'KEY_B', 'KEY_C']);
 
   if (pool.getCurrentKey() === 'KEY_A') {
@@ -293,7 +293,7 @@ try {
 section('Garbage Collector (GC)');
 
 try {
-  const { compressHistory } = await import('./src/agent/gc.ts');
+  const { compressHistory } = await import('./packages/core/src/agent/gc.ts');
   const mockHistory: ConversationMessage[] = [
     { role: 'user', content: 'Turn 1' },
     { role: 'assistant', content: 'Let me do this', toolCalls: [{ id: '1', name: 't', args: {} }] },
@@ -343,7 +343,7 @@ try {
 section('Persistent Working Memory');
 
 try {
-  const { workingMemorySegment } = await import('./src/agent/prompt.ts');
+  const { workingMemorySegment } = await import('./packages/core/src/agent/prompt.ts');
   const segment = workingMemorySegment();
   
   if (typeof segment === 'string') {

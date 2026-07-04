@@ -1,0 +1,14 @@
+{
+  "name": "zex",
+  "version": "0.1.0",
+  "description": "ZEX — Autonomous AI coding agent for the terminal",
+  "type": "module",
+  "bin": {
+    "zex": "./src/index.tsx"
+  },
+  "dependencies": {
+    "@zex/core": "workspace:*",
+    "ink": "^6.8.0",
+    "react": "^19.2.4"
+  }
+}

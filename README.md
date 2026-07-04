@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" alt="React">
   <img src="https://img.shields.io/badge/Gemini-2.0_Flash-4285F4?logo=google-gemini&logoColor=white" alt="Gemini">
   <img src="https://img.shields.io/badge/Ink-React_TUI-CC3333?logo=react&logoColor=white" alt="Ink">
+  <img src="https://img.shields.io/badge/CI-passing-2ea44f?logo=github" alt="CI">
 </p>
 
 `zex` is a CLI-based AI coding assistant designed to solve the "context pollution" problem. Most assistants either send too much or too little context. `zex` manages context deliberately, pruning stale data between turns and keeping a strict token budget while enforcing military-grade security guardrails.
@@ -87,6 +88,19 @@ bun install
 ```bash
 bun dev
 # or: npm start
+```
+
+#### Build (standalone binary)
+```bash
+bun run build
+# Output: dist/zex (Linux/macOS) or dist/zex.exe (Windows)
+```
+
+#### CI
+```bash
+# Full CI pipeline locally
+bun run ci
+# or: tsc --noEmit && bun run test-offline.ts && bun run test-enterprise.ts
 ```
 
 Set your API key before chatting:

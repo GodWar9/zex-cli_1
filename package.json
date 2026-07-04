@@ -1,34 +1,35 @@
 {
   "name": "zex",
-  "module": "src/index.tsx",
+  "version": "0.1.0",
+  "description": "ZEX — Autonomous AI coding agent for the terminal",
   "type": "module",
+  "license": "MIT",
   "private": true,
+  "workspaces": [
+    "packages/core",
+    "packages/cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zex-cli/zex.git"
+  },
   "scripts": {
     "postinstall": "node -e \"const fs=require('fs'); if(!fs.existsSync('node_modules/ink/package.json')) { console.error('\\n⚠ node_modules incomplete — run: npm install\\n'); process.exit(1); }\"",
-    "dev": "bun run --watch src/index.tsx",
-    "start": "bun run src/index.tsx",
-    "build": "bun build src/index.tsx --compile --outfile dist/zex",
-    "test:tools": "bun run test-offline.ts",
-    "typecheck": "tsc --noEmit"
+    "dev": "bun run packages/cli/src/index.tsx",
+    "start": "bun run packages/cli/src/index.tsx",
+    "build": "bun build packages/cli/src/index.tsx --compile --outfile dist/zex",
+    "build:ci": "node -e \"const p=process.platform; require('child_process').execSync('bun build packages/cli/src/index.tsx --compile --outfile dist/zex'+(p==='win32'?'.exe':''),{stdio:'inherit'})\"",
+    "test": "node --experimental-strip-types --test test-offline.ts",
+    "test:enterprise": "node --experimental-strip-types --test test-enterprise.ts",
+    "ci": "tsc --noEmit && node --experimental-strip-types --test test-offline.ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build:ci && npm run ci"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^22.15.0",
     "@types/react": "^19.2.14",
+    "react-devtools-core": "^7.0.1",
     "typescript": "^5.9.3"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.82.0",
-    "@google/generative-ai": "^0.24.1",
-    "@toon-format/toon": "^2.1.0",
-    "ink": "^6.8.0",
-    "ink-text-input": "^6.0.0",
-    "meow": "^14.1.0",
-    "js-tiktoken": "^1.0.21",
-    "openai": "^6.33.0",
-    "react": "^19.2.4"
   }
 }

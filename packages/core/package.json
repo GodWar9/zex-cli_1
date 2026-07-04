@@ -1,0 +1,24 @@
+{
+  "name": "@zex/core",
+  "version": "0.1.0",
+  "description": "ZEX core library — agent orchestration, LLM providers, tools, security",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "files": [
+    "src/",
+    "README.md"
+  ],
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
+    "@google/generative-ai": "^0.24.1",
+    "@toon-format/toon": "^2.1.0",
+    "dotenv": "^17.4.2",
+    "js-tiktoken": "^1.0.21",
+    "openai": "^6.33.0"
+  }
+}
