@@ -122,7 +122,7 @@ export default function InputBox({
 
   // ── Input handler ─────────────────────────────────────────────────────────
   useInput(
-    (input, key) => {
+    (input: string, key: { return?: boolean; shift?: boolean; meta?: boolean; escape?: boolean; tab?: boolean; upArrow?: boolean; downArrow?: boolean; leftArrow?: boolean; rightArrow?: boolean; delete?: boolean; backspace?: boolean; pageUp?: boolean; pageDown?: boolean; home?: boolean; end?: boolean; ctrl?: boolean }) => {
       // ── Enter ──────────────────────────────────────────────────────────────
       if (key.return) {
         // key.meta = Option/Alt key held (⌥↵) — reliably distinguishable from plain Enter

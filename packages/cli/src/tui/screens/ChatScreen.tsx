@@ -125,7 +125,7 @@ export default function ChatScreen() {
   }, [sessionId]);
 
   // ── Tool permission gate (Y / n) ────────────────────────────────────────────
-  useInput((input, key) => {
+  useInput((input: string, key: { return?: boolean; shift?: boolean; meta?: boolean; escape?: boolean; tab?: boolean; upArrow?: boolean; downArrow?: boolean; leftArrow?: boolean; rightArrow?: boolean; delete?: boolean; backspace?: boolean; pageUp?: boolean; pageDown?: boolean; home?: boolean; end?: boolean; ctrl?: boolean }) => {
     if (pendingTool) {
       if (input.toLowerCase() === 'y' || key.return) {
         setPendingTool(null);

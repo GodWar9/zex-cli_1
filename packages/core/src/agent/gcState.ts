@@ -1,4 +1,4 @@
-/// <reference types="bun-types" />
+/// <reference types="bun" />
 // ─── Garbage Collector: reference counting + lease eviction ───────────────────
 // Tracks chunk lifetimes across context builds. Integrates with compressHistory.
 
