@@ -3,21 +3,34 @@
 // Verifies schedulers, token budgeting, key pools, failover classification,
 // and the Bun.serve REST / WebSocket backend.
 
+process.env.PORT = "3051";
+process.env.OPENAI_API_KEY = "sk-test";
+process.env.ZEX_AUTH_TOKEN = "test-secret-token";
+
 import { AdvancedTokenizer } from "./packages/core/src/llm/tokenizer.ts";
 import { CostCalculator } from "./packages/core/src/llm/costCalculator.ts";
 import { AdvancedScheduler, type ScheduledTask } from "./packages/core/src/llm/advancedScheduler.ts";
 import { PredictiveScheduler } from "./packages/core/src/llm/predictiveScheduler.ts";
-import { LLMProviderFactory } from "./packages/core/src/llm/providers.ts";
 import { TokenBudgetManager, LLMMonitor, FailureHandler, ZexLLMOrchestrator, FailureType } from "./packages/core/src/llm/orchestrator.ts";
-import { server, orchestrator } from "./packages/cli/src/api/server.ts";
 
-const GREEN  = '\x1b[32m';
-const RED    = '\x1b[31m';
+let server: any;
+let orchestrator: any;
+
+async function importServer() {
+  const module = await import("./packages/cli/src/api/server.ts");
+  server = module.server;
+  orchestrator = module.orchestrator;
+}
+
+await importServer();
+
+const GREEN = '\x1b[32m';
+const RED = '\x1b[31m';
 const YELLOW = '\x1b[33m';
-const CYAN   = '\x1b[36m';
-const DIM    = '\x1b[2m';
-const BOLD   = '\x1b[1m';
-const RESET  = '\x1b[0m';
+const CYAN = '\x1b[36m';
+const DIM = '\x1b[2m';
+const BOLD = '\x1b[1m';
+const RESET = '\x1b[0m';
 
 let passed = 0;
 let failed = 0;
@@ -37,15 +50,11 @@ function section(title: string) {
   console.log(`\n${BOLD}${CYAN}── ${title} ${'─'.repeat(Math.max(0, 50 - title.length))}${RESET}`);
 }
 
-// Ensure the default server port is set for testing
-process.env.PORT = "3051";
-process.env.ZEX_AUTH_TOKEN = "test-secret-token";
-
 // ─── 1. Advanced Tokenizer ────────────────────────────────────────────────────
 section('Advanced Tokenizer');
 try {
   const tokenizer = new AdvancedTokenizer();
-  
+
   // Exact counting
   const count = tokenizer.countPromptTokensExact("Hello World!", "gpt-4o");
   if (count > 0) {
@@ -78,7 +87,7 @@ try {
 section('Cost Calculator');
 try {
   const costCalc = new CostCalculator();
-  
+
   // Cost estimation
   const estimation = costCalc.estimateCost(1000, 2000, "gpt-4o");
   const expectedCost = (1000 / 1000) * 0.005 + (2000 / 1000) * 0.015; // $0.035
@@ -124,9 +133,9 @@ try {
 
   const reordered = scheduler.reorderQueue([taskLow, taskHigh, taskDeadlineConflict]);
   if (reordered[0]?.id === "critical" && reordered[1]?.id === "high") {
-    ok("Prioritizes deadline conflicts and higher priority correctly", `Order: ${reordered.map(t=>t.id).join(', ')}`);
+    ok("Prioritizes deadline conflicts and higher priority correctly", `Order: ${reordered.map(t => t.id).join(', ')}`);
   } else {
-    fail("Scheduler queue reordering failed", `Order: ${reordered.map(t=>t.id).join(', ')}`);
+    fail("Scheduler queue reordering failed", `Order: ${reordered.map(t => t.id).join(', ')}`);
   }
 } catch (e: any) {
   fail("Advanced Scheduler exception", e.message);
@@ -136,7 +145,7 @@ try {
 section('Predictive Scheduler');
 try {
   const predictive = new PredictiveScheduler();
-  
+
   // Baseline prediction
   const pred = predictive.predictCompletionTime("gpt-4o", 1000);
   if (pred.expectedCompletionTimeMs > 0 && pred.factors.modelFactor === 1.0) {
@@ -195,8 +204,8 @@ try {
   const r3 = handler.classifyError({ status: 503 });
 
   if (r1.type === FailureType.RateLimit && r1.shouldRetry &&
-      r2.type === FailureType.InvalidKey && !r2.shouldRetry &&
-      r3.type === FailureType.ServiceDown) {
+    r2.type === FailureType.InvalidKey && !r2.shouldRetry &&
+    r3.type === FailureType.ServiceDown) {
     ok("Accurately classifies rate limit, invalid key, and server down issues");
   } else {
     fail("Failure classification mismatch", `R1: ${JSON.stringify(r1)}, R2: ${JSON.stringify(r2)}, R3: ${JSON.stringify(r3)}`);
@@ -269,14 +278,14 @@ try {
 
   // Setup WebSocket connection
   const session = `session-${Math.random().toString(36).substring(7)}`;
-  const wsUrl = `ws://localhost:${actualPort}/v1/ws/${session}`;
-  
+  const wsUrl = `ws://localhost:${actualPort}/v1/ws/${session}?token=test-secret-token`;
+
   let wsConnected = false;
   let receivedChunks: string[] = [];
   let receivedMetrics = false;
 
   const ws = new WebSocket(wsUrl);
-  
+
   ws.onopen = () => {
     wsConnected = true;
   };

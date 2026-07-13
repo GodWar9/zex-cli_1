@@ -8,7 +8,19 @@ function verifyAuth(req: Request): boolean {
 
   const authHeader = req.headers.get("Authorization") || req.headers.get("x-zex-auth-token") || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-  return token === authToken;
+  if (token === authToken) return true;
+
+  try {
+    const url = new URL(req.url);
+    if (url.pathname.startsWith("/v1/ws/")) {
+      const queryToken = url.searchParams.get("token") || url.searchParams.get("auth");
+      if (queryToken === authToken) return true;
+    }
+  } catch {
+    // Ignore invalid URL parse for auth fallback.
+  }
+
+  return false;
 }
 
 function gatherKeys(): Array<{ provider: "openai" | "anthropic" | "gemini"; apiKey: string; priority: number }> {
