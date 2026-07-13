@@ -1,0 +1,30 @@
+name: Nightly Integration
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Live provider checks spend real API credits and can fail because of vendor outages.
+    # Run them nightly instead of on every push so push CI stays fast and free.
+    - cron: "21 3 * * *"
+
+jobs:
+  live-adapters:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Live provider integration tests
+        env:
+          ZEX_LIVE_INTEGRATION: "true"
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: bun run test:integration

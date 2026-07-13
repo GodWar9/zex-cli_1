@@ -19,8 +19,10 @@
     "start": "bun run packages/cli/src/index.tsx",
     "build": "bun build packages/cli/src/index.tsx --compile --outfile dist/zex",
     "build:ci": "node -e \"const p=process.platform; require('child_process').execSync('bun build packages/cli/src/index.tsx --compile --outfile dist/zex'+(p==='win32'?'.exe':''),{stdio:'inherit'})\"",
+    "benchmark": "bun run benchmarks/run-benchmark.ts",
     "test": "node --experimental-strip-types --test test-offline.ts",
     "test:enterprise": "node --experimental-strip-types --test test-enterprise.ts",
+    "test:integration": "node --experimental-strip-types --test test-integration.ts",
     "ci": "tsc --noEmit && node --experimental-strip-types --test test-offline.ts",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build:ci && npm run ci"

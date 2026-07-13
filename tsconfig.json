@@ -28,6 +28,8 @@
     "packages/core/src/**/*",
     "packages/cli/src/**/*",
     "test-offline.ts",
-    "test-enterprise.ts"
+    "test-enterprise.ts",
+    "test-integration.ts",
+    "benchmarks/run-benchmark.ts"
   ]
 }

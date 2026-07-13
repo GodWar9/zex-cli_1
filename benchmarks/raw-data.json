@@ -1,0 +1,91 @@
+{
+  "generatedAt": "2026-07-13T16:37:24.692Z",
+  "model": "gpt-4o-mini",
+  "taskCount": 25,
+  "runs": [
+    {
+      "run": 1,
+      "off": {
+        "tokens": 807739,
+        "costUsd": 0.12224084999999998,
+        "wallClockMs": 1263.5,
+        "cacheHits": 0,
+        "cacheLookups": 25,
+        "cacheHitRate": 0
+      },
+      "on": {
+        "tokens": 60699,
+        "costUsd": 0.010184849999999999,
+        "wallClockMs": 914.94,
+        "cacheHits": 0,
+        "cacheLookups": 25,
+        "cacheHitRate": 0
+      },
+      "reduction": {
+        "tokensPct": 92.48532013435032,
+        "costPct": 91.66821074951622,
+        "wallClockPct": 27.58686189157103
+      }
+    },
+    {
+      "run": 2,
+      "off": {
+        "tokens": 807739,
+        "costUsd": 0.12224084999999998,
+        "wallClockMs": 879.84,
+        "cacheHits": 0,
+        "cacheLookups": 25,
+        "cacheHitRate": 0
+      },
+      "on": {
+        "tokens": 60699,
+        "costUsd": 0.010184849999999999,
+        "wallClockMs": 1433.9,
+        "cacheHits": 0,
+        "cacheLookups": 25,
+        "cacheHitRate": 0
+      },
+      "reduction": {
+        "tokensPct": 92.48532013435032,
+        "costPct": 91.66821074951622,
+        "wallClockPct": -62.972813238770684
+      }
+    },
+    {
+      "run": 3,
+      "off": {
+        "tokens": 807739,
+        "costUsd": 0.12224084999999998,
+        "wallClockMs": 1279.86,
+        "cacheHits": 0,
+        "cacheLookups": 25,
+        "cacheHitRate": 0
+      },
+      "on": {
+        "tokens": 60699,
+        "costUsd": 0.010184849999999999,
+        "wallClockMs": 1441.13,
+        "cacheHits": 0,
+        "cacheLookups": 25,
+        "cacheHitRate": 0
+      },
+      "reduction": {
+        "tokensPct": 92.48532013435032,
+        "costPct": 91.66821074951622,
+        "wallClockPct": -12.600596940290362
+      }
+    }
+  ],
+  "averages": {
+    "tokensOff": 807739,
+    "tokensOn": 60699,
+    "costOff": 0.12224085,
+    "costOn": 0.010184849999999999,
+    "wallClockOffMs": 1141.0666666666666,
+    "wallClockOnMs": 1263.3233333333335,
+    "cacheHitRateOn": 0,
+    "tokensReductionPct": 92.48532013435032,
+    "costReductionPct": 91.66821074951622,
+    "wallClockReductionPct": -15.995516095830004
+  }
+}

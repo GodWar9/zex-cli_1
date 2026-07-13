@@ -1,110 +1,75 @@
-# zex - AI Coding Assistant
+# ZEX
 
-<p align="center">
-  <img src="image.png" alt="zex banner">
-</p>
+[![CI](https://github.com/GodWar9/zex-cli_1/actions/workflows/ci.yml/badge.svg)](https://github.com/GodWar9/zex-cli_1/actions/workflows/ci.yml)
 
-<p align="center">
-  <strong>Context-Aware · Security-First · Token-Efficient</strong>
-</p>
+ZEX is a terminal coding agent focused on one problem: keeping long coding sessions useful after the context starts to fill up. Its differentiating idea is reliability-scored pruning: recent, referenced, and task-relevant context stays; stale tool output gets dropped or compressed.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Bun-1.1-black?logo=bun&logoColor=white" alt="Bun">
-  <img src="https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" alt="React">
-  <img src="https://img.shields.io/badge/Gemini-2.0_Flash-4285F4?logo=google-gemini&logoColor=white" alt="Gemini">
-  <img src="https://img.shields.io/badge/Ink-React_TUI-CC3333?logo=react&logoColor=white" alt="Ink">
-  <img src="https://img.shields.io/badge/CI-passing-2ea44f?logo=github" alt="CI">
-</p>
+## Demo
 
-`zex` is a CLI-based AI coding assistant designed to solve the "context pollution" problem. Most assistants either send too much or too little context. `zex` manages context deliberately, pruning stale data between turns and keeping a strict token budget while enforcing military-grade security guardrails.
+Terminal recording: pending. Do not treat the efficiency claims below as visual-demo verified until a 60-90 second recording is added here.
 
----
+## Try It In 60 Seconds
 
-### Security Guardrails
-
-Security is not an afterthought. Every interaction is gated by a multi-tier security layer:
-
-- **In-Process Scanner**: Real-time scanning for 7 critical vulnerability patterns (XSS, SQLi, Command Injection) before any file write occurs.
-- **Automated Project Audit**: Scans your codebase on launch to detect your tech stack (Next.js, Express, etc.) and identify pre-existing security gaps.
-- **Vulnerability Blocking**: Gated write tools (`write_file`, `patch_file`) that prevent the agent from introducing insecure code.
-- **Security Dashboard**: The `/security` command provides a detailed audit log of all blocks, warnings, and findings in your session.
-
-### Advanced Context Hygiene
-
-- **Semantic Chunk Pruner**: Scores history by relevance, recency, and importance; greedily packs within a 128k token budget using exact `js-tiktoken` counts.
-- **Relevance-Aware GC**: Reference-counted chunk store with lease eviction; tool results compressed only when old, large, and unreferenced.
-- **Dual Cache**: Exact (SHA-256) + semantic (cosine similarity) response cache with file-watcher invalidation.
-- **TOON Encoding**: Compact encoding for directory listings and search results (~50% token reduction).
-- **Intent Parser + Clarifier**: Fast regex intent extraction (action, files, risk level) plus LLM disambiguation for vague requests.
-- **Persistent Memory**: `/remember` and `/recall` for cross-session learnings stored in `~/.zex/memory.json`.
-
-### Core Features
-
-- **Multi-Key Rotation**: Automatically cycles through your Gemini API key pool to bypass rate limits and ensure uninterrupted workflow.
-- **Multi-Agent DAG** (opt-in via `"multiAgent": true`): Planner → Coder → Tester → Reviewer with debugger path for `/debug` intents.
-- **Collaborative Debugging** (`/debug`): Coder + Debugger + Reviewer propose fixes, weighted vote picks winner.
-- **Dependency Auditing** (`/deps`): npm audit integration + heuristic fallback for CVE detection.
-- **Cost Tracking** (`/stats --budget`): Per-agent USD spend with org budget cap enforcement.
-- **Memory Clustering** (`/cluster`): Auto-merges duplicate `/remember` entries on startup.
-- **Enterprise (Q4)**:
-  - Org policies via `~/.zex/org.json` (see `org.example.json`)
-  - SAML/LDAP/API-key auth stubs (`/login`, `ZEX_AUTH_TOKEN`)
-  - Persistent audit log (`~/.zex/audit/`, `/audit`)
-  - Fine-tune export (`/export-finetune` → JSONL dataset)
-- **Slash Commands**:
-  - `/context` — token budget and context composition
-  - `/stats` — cache hits, pruner runs, agent timings
-  - `/remember` / `/recall` — persistent memory
-  - `/export` — export session as markdown
-  - `/undo` / `/redo` — file change history
-  - `/security`, `/plan`, `/keys`, `/config`, `/reset`
-- **Streaming TUI**: A beautiful, reactive terminal interface built with React (Ink).
-
-### Advantages
-
-- **Extreme Token Efficiency**: Do more with less context.
-- **Safe Vibe Coding**: Focus on building while `zex` handles context management and security.
-- **Smart Pruning**: Keeps your context window fresh and free of repetitive tool logs.
-
----
-
-### 🏁 Getting Started
-
-#### Prerequisites
-- Node.js 18+ or Bun
-- Multiple Gemini API Keys
-
-#### Installation
 ```bash
-# Windows / OneDrive: use npm (bun install can leave empty placeholder folders)
 npm install
-
-# macOS / Linux
-bun install
-```
-
-#### Run
-```bash
+$env:GEMINI_API_KEY = "your-key-here" # PowerShell
 bun dev
-# or: npm start
 ```
 
-#### Build (standalone binary)
+macOS/Linux:
+
+```bash
+npm install
+export GEMINI_API_KEY="your-key-here"
+bun dev
+```
+
+Build a standalone binary:
+
 ```bash
 bun run build
-# Output: dist/zex (Linux/macOS) or dist/zex.exe (Windows)
 ```
 
-#### CI
+## What Is Verified
+
+- CI runs typecheck, offline tests, enterprise API/WebSocket tests, and binary builds on Linux, macOS, and Windows.
+- `bun run benchmark` runs 25 fixed coding prompts three times with pruning/cache off and on, then writes [BENCHMARKS.md](BENCHMARKS.md) and [benchmarks/raw-data.json](benchmarks/raw-data.json).
+- `bun run test:integration` contains live OpenAI, Anthropic, and Gemini adapter checks. It is skipped by default and runs in the nightly GitHub workflow when API-key secrets are configured.
+
+## Core Pieces
+
+- Context pruner: scores chunks by relevance, recency, and pinned importance.
+- Dual cache: exact hash hits plus high-similarity semantic hits.
+- Token and cost accounting: local tokenizer and model-cost calculator for session stats and benchmarks.
+- Security scanner: blocks risky write patterns before tool output reaches files.
+- TUI: React/Ink terminal interface with streaming output and status visibility.
+
+## Local Checks
+
 ```bash
-# Full CI pipeline locally
-bun run ci
-# or: tsc --noEmit && bun run test-offline.ts && bun run test-enterprise.ts
+bun run typecheck
+bun run test-offline.ts
+bun run test-enterprise.ts
+bun run test:integration
+bun run benchmark
+bun run build
 ```
 
-Set your API key before chatting:
+Live integration tests require:
+
 ```bash
-# PowerShell
-$env:GEMINI_API_KEY = "your-key-here"
+$env:ZEX_LIVE_INTEGRATION = "true"
+$env:OPENAI_API_KEY = "..."
+$env:ANTHROPIC_API_KEY = "..."
+$env:GEMINI_API_KEY = "..."
+bun run test:integration
 ```
+
+## Project Hygiene
+
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+- Benchmarks: [BENCHMARKS.md](BENCHMARKS.md)
+- CI workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
+- Nightly live API workflow: [.github/workflows/integration.yml](.github/workflows/integration.yml)
+
+Future work should land in small, logical commits and update the changelog with each user-visible change.

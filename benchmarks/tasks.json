@@ -1,0 +1,102 @@
+[
+  {
+    "id": "auth-header-bug",
+    "prompt": "Fix a bug where the API server accepts malformed Authorization headers and add a regression test."
+  },
+  {
+    "id": "ws-auth-regression",
+    "prompt": "Investigate why authenticated WebSocket connections fail during enterprise tests and patch the smallest affected surface."
+  },
+  {
+    "id": "cache-invalidation",
+    "prompt": "Make response cache entries invalidate when a referenced source file changes."
+  },
+  {
+    "id": "token-budget-status",
+    "prompt": "Add a compact token budget display to the status bar without causing terminal layout jitter."
+  },
+  {
+    "id": "pruner-keeps-recent",
+    "prompt": "Write tests proving the context pruner always keeps the most recent user and tool turns."
+  },
+  {
+    "id": "cost-summary",
+    "prompt": "Add a cost summary to the session export that groups spend by provider and model."
+  },
+  {
+    "id": "security-sqli",
+    "prompt": "Extend the security scanner to block string-concatenated SQL queries in TypeScript files."
+  },
+  {
+    "id": "project-audit-nextjs",
+    "prompt": "Improve project audit detection for Next.js apps that use the app directory instead of pages."
+  },
+  {
+    "id": "provider-retry",
+    "prompt": "Fix provider retry classification so 429 and 503 errors choose different backoff windows."
+  },
+  {
+    "id": "memory-recall",
+    "prompt": "Make /recall search persistent memory by fuzzy match and show the top three matches."
+  },
+  {
+    "id": "slash-command-help",
+    "prompt": "Add terse help text for every slash command and keep the output under 20 terminal lines."
+  },
+  {
+    "id": "file-ref-range",
+    "prompt": "Fix @file:line-range parsing when the path contains a Windows drive letter."
+  },
+  {
+    "id": "undo-stack",
+    "prompt": "Add a regression test for undo and redo after two consecutive patch_file operations."
+  },
+  {
+    "id": "dependency-audit",
+    "prompt": "Make dependency audit output actionable by grouping high severity findings first."
+  },
+  {
+    "id": "llm-openai-adapter",
+    "prompt": "Add an integration test that sends a tiny prompt through the OpenAI adapter and verifies usage metadata."
+  },
+  {
+    "id": "llm-anthropic-adapter",
+    "prompt": "Add an integration test that sends a tiny prompt through the Anthropic adapter and verifies non-empty text."
+  },
+  {
+    "id": "llm-gemini-adapter",
+    "prompt": "Add an integration test that sends a tiny prompt through the Gemini adapter and verifies token accounting."
+  },
+  {
+    "id": "tui-streaming",
+    "prompt": "Fix the TUI so streaming assistant text does not overwrite the input box on narrow terminals."
+  },
+  {
+    "id": "org-policy",
+    "prompt": "Implement an org policy check that blocks writes outside the configured workspace roots."
+  },
+  {
+    "id": "audit-log-rotation",
+    "prompt": "Add audit log rotation so old enterprise logs are pruned after the configured retention window."
+  },
+  {
+    "id": "toon-directory",
+    "prompt": "Benchmark TOON directory encoding against JSON for nested source trees and document the result."
+  },
+  {
+    "id": "gc-tool-payload",
+    "prompt": "Fix garbage collection so large old tool payloads are compressed only when no recent message references them."
+  },
+  {
+    "id": "config-defaults",
+    "prompt": "Make config defaults explicit and add a test that missing user config still starts the CLI."
+  },
+  {
+    "id": "build-windows",
+    "prompt": "Fix the Windows binary build so the artifact is named zex.exe and uploads from CI."
+  },
+  {
+    "id": "readme-cold-reader",
+    "prompt": "Rewrite the README intro for a cold reader and remove claims that are not backed by tests or benchmarks."
+  }
+]
