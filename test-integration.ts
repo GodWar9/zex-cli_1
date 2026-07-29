@@ -1,4 +1,4 @@
-import test from "node:test";
+import test, { type TestFn } from "node:test";
 import assert from "node:assert/strict";
 import {
   AnthropicProvider,
@@ -9,7 +9,7 @@ import {
 
 const liveEnabled = process.env.ZEX_LIVE_INTEGRATION === "true";
 
-function maybeTest(name: string, fn: Parameters<typeof test>[1]) {
+function maybeTest(name: string, fn: TestFn) {
   test(name, { skip: liveEnabled ? false : "Set ZEX_LIVE_INTEGRATION=true and provider API keys to run live adapter checks." }, fn);
 }
 
