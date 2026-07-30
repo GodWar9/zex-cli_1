@@ -27,6 +27,9 @@ export function detectProvider(): ProviderDefault {
   if (process.env['OPENAI_API_KEY']) {
     return { provider: 'openai', model: 'gpt-4o' };
   }
+  if (process.env['OPENROUTER_API_KEY']) {
+    return { provider: 'openrouter', model: 'openrouter/auto' };
+  }
   // Fallback to gemini-2.0-flash as the intended standard model
   return { provider: 'gemini', model: 'gemini-2.0-flash' };
 }

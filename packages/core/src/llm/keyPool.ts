@@ -4,7 +4,7 @@ import { KeyPool as BaseKeyPool } from '../agent/keyPool.ts';
 
 export interface ApiKeyMetadata {
   id: string;
-  provider: "openai" | "anthropic" | "gemini";
+  provider: string;
   apiKey: string;
   tokensUsedLifetime: number;
   tokensUsedToday: number;
@@ -26,7 +26,7 @@ export interface ApiKeyMetadata {
 
 export interface KeyPoolConfig {
   keys: Array<{
-    provider: "openai" | "anthropic" | "gemini";
+    provider: string;
     apiKey: string;
     priority?: number;
     isBackup?: boolean;
@@ -55,7 +55,7 @@ export class KeyPool {
   }
 
   loadKeysFromConfig(keysConfig: Array<{
-    provider: "openai" | "anthropic" | "gemini";
+    provider: string;
     apiKey: string;
     priority?: number;
     isBackup?: boolean;
@@ -85,7 +85,7 @@ export class KeyPool {
   selectBestKey(
     tokensEstimated: number,
     constraints?: {
-      provider?: "openai" | "anthropic" | "gemini";
+      provider?: string;
       excludeKeys?: string[];
       preferCheap?: boolean;
     }
@@ -196,12 +196,32 @@ export class KeyPool {
     };
   }
 
-  private getDefaultQuota(provider: string) {
-    const quotas: Record<string, ApiKeyMetadata["quota"]> = {
-      "openai": { dailyLimit: 1000000, hourlyLimit: 100000, requestsPerMinute: 100 },
-      "anthropic": { dailyLimit: 1000000, hourlyLimit: 100000, requestsPerMinute: 100 },
-      "gemini": { dailyLimit: 2000000, hourlyLimit: 200000, requestsPerMinute: 100 }
-    };
-    return quotas[provider] || quotas["openai"]!;
+  private static readonly BUILTIN_QUOTAS: Record<string, ApiKeyMetadata["quota"]> = {
+    "openai": { dailyLimit: 1000000, hourlyLimit: 100000, requestsPerMinute: 100 },
+    "anthropic": { dailyLimit: 1000000, hourlyLimit: 100000, requestsPerMinute: 100 },
+    "gemini": { dailyLimit: 2000000, hourlyLimit: 200000, requestsPerMinute: 100 }
+  };
+
+  private static readonly GENERIC_DEFAULT_QUOTA: ApiKeyMetadata["quota"] = {
+    dailyLimit: 500000, hourlyLimit: 50000, requestsPerMinute: 60
+  };
+
+  private static readonly _customQuotas: Map<string, ApiKeyMetadata["quota"]> = new Map();
+
+  /**
+   * Register default quota limits for a provider that isn't one of the
+   * built-ins (openai/anthropic/gemini) — e.g. openrouter, ollama, groq,
+   * or any self-hosted/OpenAI-compatible provider a user adds via config.
+   */
+  static registerQuotaDefault(provider: string, quota: ApiKeyMetadata["quota"]): void {
+    KeyPool._customQuotas.set(provider, quota);
+  }
+
+  private getDefaultQuota(provider: string): ApiKeyMetadata["quota"] {
+    return (
+      KeyPool._customQuotas.get(provider) ??
+      KeyPool.BUILTIN_QUOTAS[provider] ??
+      KeyPool.GENERIC_DEFAULT_QUOTA
+    );
   }
 }

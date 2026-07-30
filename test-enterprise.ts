@@ -214,7 +214,72 @@ try {
   fail("Failure Handler exception", e.message);
 }
 
-// ─── 7. REST & WebSocket Server Integration ──────────────────────────────────
+// ─── 7. Provider-Agnostic Key Pool ───────────────────────────────────────────
+section('Provider-Agnostic Key Pool');
+try {
+  const { KeyPool: EnterpriseKeyPool } = await import("./packages/core/src/llm/keyPool.ts");
+
+  // Custom, non-built-in provider name — must be poolable without a code change
+  const pool = new EnterpriseKeyPool({
+    keys: [
+      { provider: "openai", apiKey: "sk-test-a", priority: 5 },
+      { provider: "groq", apiKey: "groq-test-key", priority: 8 },
+      { provider: "my-self-hosted-llm", apiKey: "local-key", priority: 3 },
+    ],
+  });
+
+  const stats = pool.getKeyStats() as any;
+  if (stats.totalKeys === 3) {
+    ok("Pools keys across arbitrary, non-hardcoded provider names", `Providers: openai, groq, my-self-hosted-llm`);
+  } else {
+    fail("Expected 3 keys in pool", JSON.stringify(stats));
+  }
+
+  // selectBestKey must be able to filter down to a custom provider
+  const groqKey = pool.selectBestKey(100, { provider: "groq" });
+  if (groqKey.provider === "groq" && groqKey.apiKey === "groq-test-key") {
+    ok("selectBestKey filters correctly by a custom provider name");
+  } else {
+    fail("selectBestKey did not honor custom provider constraint", JSON.stringify(groqKey));
+  }
+
+  // Unknown providers get a sane generic default quota, not silently OpenAI's
+  const customKey = Array.from(pool.keys.values()).find(k => k.provider === "my-self-hosted-llm")!;
+  if (customKey.quota.dailyLimit === 500000 && customKey.quota.requestsPerMinute === 60) {
+    ok("Unregistered custom provider gets the generic fallback quota", JSON.stringify(customKey.quota));
+  } else {
+    fail("Custom provider did not receive expected generic quota", JSON.stringify(customKey.quota));
+  }
+
+  // registerQuotaDefault lets a user configure quota for their custom provider
+  EnterpriseKeyPool.registerQuotaDefault("my-self-hosted-llm", {
+    dailyLimit: 10_000_000, hourlyLimit: 1_000_000, requestsPerMinute: 1000,
+  });
+  const pool2 = new EnterpriseKeyPool({
+    keys: [{ provider: "my-self-hosted-llm", apiKey: "local-key-2" }],
+  });
+  const registeredKey = Array.from(pool2.keys.values())[0]!;
+  if (registeredKey.quota.dailyLimit === 10_000_000) {
+    ok("registerQuotaDefault lets users configure quota for custom providers");
+  } else {
+    fail("registerQuotaDefault was not applied", JSON.stringify(registeredKey.quota));
+  }
+
+  // recordUsage + cooldown must work identically regardless of provider name
+  pool.recordUsage(groqKey.id, { promptTokens: 50, completionTokens: 50, cost: 0.001, success: false });
+  pool.recordUsage(groqKey.id, { promptTokens: 50, completionTokens: 50, cost: 0.001, success: false });
+  pool.recordUsage(groqKey.id, { promptTokens: 50, completionTokens: 50, cost: 0.001, success: false });
+  const afterFailures = pool.keys.get(groqKey.id)!;
+  if (afterFailures.status === "cooldown" && afterFailures.cooldownUntil) {
+    ok("Cooldown/backoff logic works identically for a custom provider", `consecutiveErrors: ${afterFailures.consecutiveErrors}`);
+  } else {
+    fail("Cooldown did not trigger for custom provider after repeated failures", JSON.stringify(afterFailures));
+  }
+} catch (e: any) {
+  fail("Provider-Agnostic Key Pool test exception", e.message);
+}
+
+// ─── 8. REST & WebSocket Server Integration ──────────────────────────────────
 section('REST & WebSocket Server Integration');
 
 try {
