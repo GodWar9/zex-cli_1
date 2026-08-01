@@ -13,6 +13,12 @@
     "src/",
     "README.md"
   ],
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
     "@google/generative-ai": "0.24.0",

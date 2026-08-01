@@ -4,10 +4,21 @@
   "description": "ZEX — Autonomous AI coding agent for the terminal",
   "type": "module",
   "bin": {
-    "zex": "./src/index.tsx"
+    "zex": "./dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "build": "bun build src/index.tsx --outfile dist/cli.js --target node --format esm --production --external react --external react-devtools-core --external ink --external dotenv --external openai --external @anthropic-ai/sdk --external @google/generative-ai --external js-tiktoken --external @toon-format/toon --banner '#!/usr/bin/env node' && chmod +x dist/cli.js",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@zex/core": "file:../core",
+    "@zex/core": "^0.1.0",
     "ink": "7.1.0",
     "react": "^19.2.7"
   }

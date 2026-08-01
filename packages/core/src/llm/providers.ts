@@ -32,7 +32,7 @@ export interface ChatResponse {
 export class OpenAIProvider implements IEnterpriseProvider {
   private client?: OpenAI;
 
-  constructor(private apiKey: string) {
+  constructor(apiKey: string) {
     if (apiKey !== "sk-test") {
       this.client = new OpenAI({ apiKey });
     }
@@ -110,7 +110,7 @@ export class OpenAIProvider implements IEnterpriseProvider {
 export class AnthropicProvider implements IEnterpriseProvider {
   private client?: Anthropic;
 
-  constructor(private apiKey: string) {
+  constructor(apiKey: string) {
     if (apiKey !== "claude-test") {
       this.client = new Anthropic({ apiKey });
     }
@@ -185,7 +185,7 @@ export class AnthropicProvider implements IEnterpriseProvider {
 export class GeminiProvider implements IEnterpriseProvider {
   private client?: GoogleGenerativeAI;
 
-  constructor(private apiKey: string) {
+  constructor(apiKey: string) {
     if (apiKey !== "gemini-test") {
       this.client = new GoogleGenerativeAI(apiKey);
     }

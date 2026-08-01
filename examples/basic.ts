@@ -1,7 +1,8 @@
 // ─── Basic ZEX Example ──────────────────────────────────────────────────────
-// Run with: bun run examples/basic.ts
+// Run with: node examples/basic.ts   (requires Node >= 22.6.0)
 //
-// This shows how to use @zex/core programmatically:
+// This shows how to use @zex/core programmatically as a real npm consumer
+// would — via `npm install @zex/core`, not a relative monorepo path:
 //   1. Create an orchestrator with provider keys
 //   2. Queue a task
 //   3. Wait for the result
@@ -9,10 +10,11 @@
 // Requires at least one of OPENAI_API_KEY, ANTHROPIC_API_KEY, or
 // GEMINI_API_KEY to be set in the environment or .env file.
 
-import { ZexLLMOrchestrator } from '../packages/core/src/llm/orchestrator.ts';
+import { ZexOrchestrator } from '@zex/core';
 
-// Gather API keys from environment
-const keys: Array<{ provider: 'openai' | 'anthropic' | 'gemini'; apiKey: string }> = [];
+// Gather API keys from environment. Provider is just a string — any
+// registered provider works, not only the three built-ins.
+const keys: Array<{ provider: string; apiKey: string }> = [];
 
 if (process.env.OPENAI_API_KEY) {
   keys.push({ provider: 'openai', apiKey: process.env.OPENAI_API_KEY });
@@ -30,7 +32,7 @@ if (keys.length === 0) {
 }
 
 // Create the orchestrator
-const orchestrator = new ZexLLMOrchestrator({
+const orchestrator = new ZexOrchestrator({
   keys,
   dailyBudgetUSD: 1.0,
   maxConcurrentRequests: 2,

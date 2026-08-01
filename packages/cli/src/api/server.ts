@@ -1,4 +1,4 @@
-import { ZexLLMOrchestrator } from "../../../core/src/llm/orchestrator.ts";
+import { ZexLLMOrchestrator } from "@zex/core/llm/orchestrator.ts";
 
 function verifyAuth(req: Request): boolean {
   const authToken = process.env.ZEX_AUTH_TOKEN;

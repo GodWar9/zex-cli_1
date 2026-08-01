@@ -14,6 +14,7 @@ export interface TokenizerConfig {
 }
 
 export class AdvancedTokenizer {
+  private config: TokenizerConfig;
   private encodings = new Map<string, any>();
   private completionStats = new Map<string, {
     avg: number;
@@ -22,7 +23,8 @@ export class AdvancedTokenizer {
     stdDev: number;
   }>();
 
-  constructor(private config: TokenizerConfig = {}) {
+  constructor(config: TokenizerConfig = {}) {
+    this.config = config;
     // Pre-load common model encodings
     this.loadEncodings([
       "gpt-4o",

@@ -387,14 +387,18 @@ export class LLMMonitor {
   }
 }
 
-export enum FailureType {
-  RateLimit = "rate_limit",
-  InvalidKey = "invalid_key",
-  ServiceDown = "service_down",
-  Timeout = "timeout",
-  BadRequest = "bad_request",
-  Unknown = "unknown"
-}
+// Note: deliberately a `const` object (not `enum`) — `enum` is non-erasable
+// TypeScript syntax that Node's native type-stripping can't handle, and this
+// package is designed to run as raw .ts source (see packages/core/README.md).
+export const FailureType = {
+  RateLimit: "rate_limit",
+  InvalidKey: "invalid_key",
+  ServiceDown: "service_down",
+  Timeout: "timeout",
+  BadRequest: "bad_request",
+  Unknown: "unknown",
+} as const;
+export type FailureType = (typeof FailureType)[keyof typeof FailureType];
 
 export class FailureHandler {
   classifyError(error: any): {
@@ -518,10 +522,12 @@ export class ZexLLMOrchestrator {
   public providerFactory: LLMProviderFactory;
 
   public taskQueue: Map<string, TaskWithMetrics> = new Map();
+  private config: OrchestratorConfig;
   private executingTasks = new Set<string>();
   private schedulerInterval: any = null;
 
-  constructor(private config: OrchestratorConfig) {
+  constructor(config: OrchestratorConfig) {
+    this.config = config;
     this.keyPool = new KeyPool(config);
     this.tokenizer = new AdvancedTokenizer({});
     this.costCalc = new CostCalculator();
