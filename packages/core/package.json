@@ -3,13 +3,17 @@
   "version": "0.1.0",
   "description": "ZEX core library — agent orchestration, LLM providers, tools, security",
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
     "./*": "./src/*"
   },
   "files": [
+    "dist/",
     "src/",
     "README.md"
   ],
@@ -18,6 +22,10 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",

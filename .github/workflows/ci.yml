@@ -50,6 +50,9 @@ jobs:
       - name: Build binary
         run: bun run build
 
+      - name: Build publishable npm packages (@zex/core dist + zex CLI bin)
+        run: bun run build:packages
+
       - uses: actions/upload-artifact@v4
         with:
           name: zex-${{ matrix.os }}

@@ -4,10 +4,11 @@ Core orchestration library for [zex](https://www.npmjs.com/package/zex) — agen
 orchestration, LLM provider adapters, multi-key pooling, budget management, and
 security scanning. Framework-agnostic; the `zex` CLI is one consumer of it.
 
-> **Ships as raw TypeScript, not compiled JS.** Requires Node.js **>= 22.6.0**
-> (native TypeScript type-stripping). On older Node, run with
-> `NODE_OPTIONS=--experimental-strip-types`. This is a deliberate, currently
-> experimental packaging choice — see "Stability" below.
+> `import { ... } from "@zex/core"` resolves to compiled JS (`dist/`), built
+> via `tsc`. Requires Node.js **>= 22.6.0**. Deep subpath imports (e.g.
+> `@zex/core/agent/runner.ts`) still resolve to raw TypeScript source — those
+> are for the `zex` CLI's own bundler-time use, not meant to be `require`d /
+> `import`ed directly by Node at runtime. See "Stability" below.
 
 ## Install
 
@@ -77,8 +78,8 @@ API — it may change or move without a semver-major bump.
 ## Stability
 
 This is `0.x` — expect breaking changes. Most likely to change:
-- The deep-subpath internal exports (see above)
+- The deep-subpath internal exports (see above) — raw source, no compiled/typed
+  contract, may move or change shape without a semver-major bump
 - `KeyPool`'s exact quota-object shape
-- Raw-TypeScript-source distribution (may move to a compiled `dist/` build in
-  a future major version once the wider ecosystem's minimum-Node-version
-  requirements settle)
+- The compiled-output build pipeline itself (currently plain `tsc`; may adopt
+  bundling/minification in a future minor version)

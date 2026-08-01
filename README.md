@@ -30,6 +30,13 @@ Build a standalone binary:
 bun run build
 ```
 
+## Using the published npm packages
+
+This repo is the monorepo source. If you just want to *use* zex rather than
+develop it:
+- CLI: [`packages/cli/README.md`](./packages/cli/README.md) — `npx zex`
+- Library: [`packages/core/README.md`](./packages/core/README.md) — `npm install @zex/core`
+
 ## What Is Verified
 
 - CI runs typecheck, offline tests, enterprise API/WebSocket tests, and binary builds on Linux, macOS, and Windows.
