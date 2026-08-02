@@ -2,6 +2,19 @@
 
 **Context-Aware · Security-First · Token-Efficient**
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Bun-1.3-black?logo=bun&logoColor=white" alt="Bun">
+  <img src="https://img.shields.io/badge/TypeScript-7.0-blue?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" alt="React">
+  <img src="https://img.shields.io/badge/Ink-7.1_TUI-CC3333?logo=react&logoColor=white" alt="Ink">
+  <img src="https://img.shields.io/badge/Node.js-%3E%3D22.6-339933?logo=node.js&logoColor=white" alt="Node.js">
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?logo=google-gemini&logoColor=white" alt="Gemini">
+  <img src="https://img.shields.io/badge/OpenAI-Supported-412991?logo=openai&logoColor=white" alt="OpenAI">
+  <img src="https://img.shields.io/badge/Anthropic-Supported-D97757?logo=anthropic&logoColor=white" alt="Anthropic">
+</p>
+
 [![CI](https://github.com/GodWar9/zex-cli_1/actions/workflows/ci.yml/badge.svg)](https://github.com/GodWar9/zex-cli_1/actions/workflows/ci.yml)
 
 `zex` is a CLI-based AI coding assistant built to solve the "context pollution" problem. Most assistants either send too much context or too little. `zex` manages context deliberately — pruning stale data between turns and keeping a strict token budget — while enforcing layered security guardrails around every file write.
@@ -9,6 +22,20 @@
 ## Demo
 
 Terminal recording: pending. Treat the efficiency numbers below as benchmark-backed (see [BENCHMARKS.md](BENCHMARKS.md)), not demo-verified, until a recording is added here.
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Runtime (dev) | [Bun](https://bun.sh) 1.3 |
+| Runtime (published packages) | Node.js >= 22.6.0 (no Bun required — see [Using the published npm packages](#using-the-published-npm-packages)) |
+| Language | TypeScript 7.0 |
+| Terminal UI | [Ink](https://github.com/vadimdemedes/ink) 7.1 (React 19 for the terminal) |
+| Headless API | `node:http` + [`ws`](https://github.com/websockets/ws) — REST + WebSocket |
+| LLM providers | OpenAI, Anthropic, Gemini built in; provider-agnostic adapter interface for custom/self-hosted OpenAI-compatible endpoints |
+| Tokenizer | [`js-tiktoken`](https://github.com/dqbd/tiktoken) |
+| Payload encoding | [`@toon-format/toon`](https://www.npmjs.com/package/@toon-format/toon) for uniform-array tool results |
+| Packaging | npm workspaces — `@zex/core` (library, compiled via `tsc`) + `zex` (CLI, bundled via Bun) |
 
 ## Security Guardrails
 
@@ -22,20 +49,24 @@ Security isn't an afterthought — every write is gated by a multi-tier security
 ## Advanced Context Hygiene
 
 - **Relevance-aware GC**: tool results are only compressed if they're old (more than 3 user turns ago), large (over 600 characters), *and* not referenced by filename, tool name, or keyword in the last 3 messages. Nothing gets pruned just because it's old.
-- **TOON encoding**: uniform-array tool results (directory listings, search results) get encoded via [`@toon-format/toon`](https://www.npmjs.com/package/@toon-format/toon) instead of raw JSON — roughly 40-60% fewer tokens on that payload shape, falling back to plain JSON for anything non-uniform.
+- **TOON encoding**: uniform-array tool results (directory listings, search results) get encoded via `@toon-format/toon` instead of raw JSON — roughly 40-60% fewer tokens on that payload shape, falling back to plain JSON for anything non-uniform.
 - **Intent clarifier**: a cheap (300 max-token) pre-pass runs before every main agent call to disambiguate vague requests and flag security-sensitive intent (touching auth, a database, the filesystem, or env vars) early, before the expensive call happens.
 - **Measured impact**: the checked-in benchmark (`bun run benchmark`, 25 fixed coding prompts, 3 runs, [full results](BENCHMARKS.md)) shows a 92.5% token reduction and 91.7% estimated-cost reduction with pruning and caching on vs. off. Reproducible — rerun it yourself.
 
 ## Core Features
 
-- **Multi-key rotation**: automatically cycles through a pool of Gemini API keys on a 429, putting the exhausted key on a 60-second cooldown and moving to the next one — no interrupted workflow.
+- **Context pruner**: scores chunks by relevance, recency, and pinned importance — see Advanced Context Hygiene above.
+- **Dual cache**: exact hash hits plus high-similarity semantic hits.
+- **Provider-agnostic orchestration**: the multi-key pool and provider adapters aren't hardcoded to one vendor — built-in support for OpenAI, Anthropic, and Gemini, plus a registration API for custom/self-hosted OpenAI-compatible providers, with per-provider quota tracking.
+- **Multi-key rotation**: the interactive TUI automatically cycles through a pool of Gemini API keys on a 429, putting the exhausted key on a 60-second cooldown and moving to the next one — no interrupted workflow.
+- **Token and cost accounting**: local tokenizer and model-cost calculator for session stats and benchmarks.
+- **Security scanner**: blocks risky write patterns before tool output reaches files (see Security Guardrails above).
 - **Slash commands**:
   - `/security` — full security audit and event history
   - `/undo` — instant revert of the last file write (snapshot taken *before* the write, so it's always safe)
   - `/plan` — toggle plan-before-act mode, forcing the agent to propose a plan before touching code
   - `/keys` — health and cooldown status of your API key pool
-- **Provider-agnostic orchestration**: the underlying multi-key pool and provider adapters aren't hardcoded to one vendor — built-in support for OpenAI, Anthropic, and Gemini, with a registration API for custom/self-hosted OpenAI-compatible providers.
-- **Headless mode**: `zex --serve` runs the same orchestrator behind a REST + WebSocket API, for when you want zex embedded in something other than a terminal.
+- **Headless mode**: `zex --serve` runs the same orchestrator behind a REST + WebSocket API, for when you want zex embedded in something other than a terminal. Runs under Node or Bun.
 - **Streaming TUI**: a React (Ink) terminal interface with streaming output and live status.
 
 ## Advantages
@@ -49,7 +80,7 @@ Security isn't an afterthought — every write is gated by a multi-tier security
 ### Prerequisites
 
 - [Bun](https://bun.sh) — used for installs and the dev workflow below.
-- One or more Gemini API keys (or an OpenAI/Anthropic key — see [Core Pieces](#core-pieces) below).
+- One or more Gemini API keys (or an OpenAI/Anthropic key — see [Core Features](#core-features) above).
 
 > Using the published package instead of developing this repo? `npx zex` and `npm install @zex/core` only need plain **Node.js >= 22.6.0** — no Bun required. See [`packages/cli/README.md`](./packages/cli/README.md) and [`packages/core/README.md`](./packages/core/README.md).
 
@@ -72,16 +103,6 @@ Build a standalone binary:
 ```bash
 bun run build
 ```
-
-## Core Pieces
-
-- Context pruner: scores chunks by relevance, recency, and pinned importance.
-- Dual cache: exact hash hits plus high-similarity semantic hits.
-- Provider-agnostic multi-key pool: pools and rotates API keys across any provider, with per-provider quota tracking and configurable defaults for custom providers.
-- Token and cost accounting: local tokenizer and model-cost calculator for session stats and benchmarks.
-- Security scanner: blocks risky write patterns before tool output reaches files.
-- TUI: React/Ink terminal interface with streaming output and status visibility.
-- Headless API server (`zex --serve`): REST + WebSocket, runs under Node or Bun.
 
 ## What Is Verified
 
