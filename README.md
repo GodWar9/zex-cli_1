@@ -1,27 +1,70 @@
-# ZEX
+# zex — AI Coding Assistant
+
+**Context-Aware · Security-First · Token-Efficient**
 
 [![CI](https://github.com/GodWar9/zex-cli_1/actions/workflows/ci.yml/badge.svg)](https://github.com/GodWar9/zex-cli_1/actions/workflows/ci.yml)
 
 
-ZEX is a terminal coding agent focused on one problem: keeping long coding sessions useful after the context starts to fill up. Its differentiating idea is reliability-scored pruning: recent, referenced, and task-relevant context stays; stale tool output gets dropped or compressed.
+`zex` is a CLI-based AI coding assistant built to solve the "context pollution" problem. Most assistants either send too much context or too little. `zex` manages context deliberately — pruning stale data between turns and keeping a strict token budget — while enforcing layered security guardrails around every file write.
 
 ## Demo
 
-Terminal recording: pending. Do not treat the efficiency claims below as visual-demo verified until a 60-90 second recording is added here.
+Terminal recording: pending. Treat the efficiency numbers below as benchmark-backed (see [BENCHMARKS.md](BENCHMARKS.md)), not demo-verified, until a recording is added here.
 
-## Try It In 60 Seconds
+## Security Guardrails
+
+Security isn't an afterthought — every write is gated by a multi-tier security layer:
+
+- **In-process scanner**: real-time regex-based scanning across 13 vulnerability rules (SQL injection, XSS via `innerHTML`, command injection, `eval()`, SSRF, hardcoded secrets/private keys, path traversal, unsafe `Math.random()` for secrets, and more) before any file write is executed. See [`security/scanner.ts`](./packages/core/src/security/scanner.ts).
+- **Automated project audit**: runs once at session start, detects your framework (Next.js, Express, FastAPI) and whether the project touches auth, a database, or the filesystem, then shallow-scans existing source for pre-existing findings — capped at 50 files, completes in under 500ms.
+- **Vulnerability blocking**: `write_file` and `patch_file` are gated tools — a `critical`-severity finding blocks the write outright (with a bounded retry budget before it's surfaced to you instead of looping); `high`/`medium` findings are logged as warnings, not silently ignored.
+- **Security dashboard**: `/security` shows the full audit log of everything blocked, warned, or logged in your session.
+
+## Advanced Context Hygiene
+
+- **Relevance-aware GC**: tool results are only compressed if they're old (more than 3 user turns ago), large (over 600 characters), *and* not referenced by filename, tool name, or keyword in the last 3 messages. Nothing gets pruned just because it's old.
+- **TOON encoding**: uniform-array tool results (directory listings, search results) get encoded via [`@toon-format/toon`](https://www.npmjs.com/package/@toon-format/toon) instead of raw JSON — roughly 40-60% fewer tokens on that payload shape, falling back to plain JSON for anything non-uniform.
+- **Intent clarifier**: a cheap (300 max-token) pre-pass runs before every main agent call to disambiguate vague requests and flag security-sensitive intent (touching auth, a database, the filesystem, or env vars) early, before the expensive call happens.
+- **Measured impact**: the checked-in benchmark (`bun run benchmark`, 25 fixed coding prompts, 3 runs, [full results](BENCHMARKS.md)) shows a 92.5% token reduction and 91.7% estimated-cost reduction with pruning and caching on vs. off. Reproducible — rerun it yourself.
+
+## Core Features
+
+- **Multi-key rotation**: automatically cycles through a pool of Gemini API keys on a 429, putting the exhausted key on a 60-second cooldown and moving to the next one — no interrupted workflow.
+- **Slash commands**:
+  - `/security` — full security audit and event history
+  - `/undo` — instant revert of the last file write (snapshot taken *before* the write, so it's always safe)
+  - `/plan` — toggle plan-before-act mode, forcing the agent to propose a plan before touching code
+  - `/keys` — health and cooldown status of your API key pool
+- **Provider-agnostic orchestration**: the underlying multi-key pool and provider adapters aren't hardcoded to one vendor — built-in support for OpenAI, Anthropic, and Gemini, with a registration API for custom/self-hosted OpenAI-compatible providers.
+- **Headless mode**: `zex --serve` runs the same orchestrator behind a REST + WebSocket API, for when you want zex embedded in something other than a terminal.
+- **Streaming TUI**: a React (Ink) terminal interface with streaming output and live status.
+
+## Advantages
+
+- **Extreme token efficiency**: 92.5% measured token reduction on the benchmark corpus with pruning + caching on ([BENCHMARKS.md](BENCHMARKS.md)).
+- **Safe vibe coding**: focus on building — zex handles context management and blocks insecure writes before they land.
+- **Smart pruning, not blind truncation**: recently-referenced context survives regardless of age; only stale, unreferenced tool output gets compressed.
+
+## 🏁 Getting Started
+
+### Prerequisites
+
+- [Bun](https://bun.sh) — used for installs and the dev workflow below.
+- One or more Gemini API keys (or an OpenAI/Anthropic key — see [Core Pieces](#core-pieces) below).
+
+> Using the published package instead of developing this repo? `npx zex` and `npm install @zex/core` only need plain **Node.js >= 22.6.0** — no Bun required. See [`packages/cli/README.md`](./packages/cli/README.md) and [`packages/core/README.md`](./packages/core/README.md).
+
+### Installation
 
 ```bash
-npm install
-$env:GEMINI_API_KEY = "your-key-here" # PowerShell
-bun dev
+bun install
 ```
 
-macOS/Linux:
+### Run
 
 ```bash
-npm install
-export GEMINI_API_KEY="your-key-here"
+export GEMINI_API_KEY="your-key-here"   # macOS/Linux
+# $env:GEMINI_API_KEY = "your-key-here" # PowerShell
 bun dev
 ```
 
@@ -31,23 +74,15 @@ Build a standalone binary:
 bun run build
 ```
 
-## Runtime requirements
+## Core Pieces
 
-- **Developing this repo:** [Bun](https://bun.sh) (any recent version) — used for installs, the dev loop, and building.
-- **Using the published packages** (`npx zex`, `npm install @zex/core`): plain **Node.js >= 22.6.0**. No Bun required — the CLI and library are fully portable; see below.
-
-## Using the published npm packages
-
-This repo is the monorepo source. If you just want to *use* zex rather than
-develop it:
-- CLI: [`packages/cli/README.md`](./packages/cli/README.md) — `npx zex`
-- Library: [`packages/core/README.md`](./packages/core/README.md) — `npm install @zex/core`
-
-Both packages are verified against a real, isolated `npm install` (not just
-local monorepo dev) as part of getting them ready to publish: the CLI's
-binary, the headless `--serve` API (HTTP + WebSocket), and direct
-`import { ZexOrchestrator } from "@zex/core"` library usage all run under
-plain Node with zero Bun dependency.
+- Context pruner: scores chunks by relevance, recency, and pinned importance.
+- Dual cache: exact hash hits plus high-similarity semantic hits.
+- Provider-agnostic multi-key pool: pools and rotates API keys across any provider, with per-provider quota tracking and configurable defaults for custom providers.
+- Token and cost accounting: local tokenizer and model-cost calculator for session stats and benchmarks.
+- Security scanner: blocks risky write patterns before tool output reaches files.
+- TUI: React/Ink terminal interface with streaming output and status visibility.
+- Headless API server (`zex --serve`): REST + WebSocket, runs under Node or Bun.
 
 ## What Is Verified
 
@@ -55,15 +90,13 @@ plain Node with zero Bun dependency.
 - `bun run benchmark` runs 25 fixed coding prompts three times with pruning/cache off and on, then writes [BENCHMARKS.md](BENCHMARKS.md) and [benchmarks/raw-data.json](benchmarks/raw-data.json).
 - `bun run test:integration` contains live OpenAI, Anthropic, and Gemini adapter checks. Each provider's test is skipped independently if that provider's API-key secret isn't configured, and runs for real (nightly, via GitHub Actions) for whichever providers have keys set.
 
-## Core Pieces
+## Using the published npm packages
 
-- Context pruner: scores chunks by relevance, recency, and pinned importance.
-- Dual cache: exact hash hits plus high-similarity semantic hits.
-- Provider-agnostic multi-key pool: pools and rotates API keys across any provider (not just the three built-ins), with per-provider quota tracking and configurable defaults for custom providers.
-- Token and cost accounting: local tokenizer and model-cost calculator for session stats and benchmarks.
-- Security scanner: blocks risky write patterns before tool output reaches files.
-- TUI: React/Ink terminal interface with streaming output and status visibility.
-- Headless API server (`zex --serve`): REST + WebSocket, runs under Node or Bun.
+This repo is the monorepo source. If you just want to *use* zex rather than develop it:
+- CLI: [`packages/cli/README.md`](./packages/cli/README.md) — `npx zex`
+- Library: [`packages/core/README.md`](./packages/core/README.md) — `npm install @zex/core`
+
+Both packages are verified against a real, isolated `npm install` (not just local monorepo dev): the CLI binary, the headless `--serve` API, and direct `import { ZexOrchestrator } from "@zex/core"` library usage all run under plain Node with zero Bun dependency.
 
 ## Local Checks
 
@@ -87,8 +120,7 @@ $env:GEMINI_API_KEY = "..."
 bun run test:integration
 ```
 
-You don't need all three — any subset is fine. Unconfigured providers skip
-cleanly rather than failing the run.
+You don't need all three — any subset is fine. Unconfigured providers skip cleanly rather than failing the run.
 
 ## Project Hygiene
 
