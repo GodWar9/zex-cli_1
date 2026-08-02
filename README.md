@@ -1,7 +1,7 @@
 # ZEX
 
 [![CI](https://github.com/GodWar9/zex-cli_1/actions/workflows/ci.yml/badge.svg)](https://github.com/GodWar9/zex-cli_1/actions/workflows/ci.yml)
-[![Nightly Integration](https://github.com/GodWar9/zex-cli_1/actions/workflows/integration.yml/badge.svg)](https://github.com/GodWar9/zex-cli_1/actions/workflows/integration.yml)
+
 
 ZEX is a terminal coding agent focused on one problem: keeping long coding sessions useful after the context starts to fill up. Its differentiating idea is reliability-scored pruning: recent, referenced, and task-relevant context stays; stale tool output gets dropped or compressed.
 
