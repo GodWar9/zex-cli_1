@@ -4,7 +4,6 @@
 
 [![CI](https://github.com/GodWar9/zex-cli_1/actions/workflows/ci.yml/badge.svg)](https://github.com/GodWar9/zex-cli_1/actions/workflows/ci.yml)
 
-
 `zex` is a CLI-based AI coding assistant built to solve the "context pollution" problem. Most assistants either send too much context or too little. `zex` manages context deliberately — pruning stale data between turns and keeping a strict token budget — while enforcing layered security guardrails around every file write.
 
 ## Demo
