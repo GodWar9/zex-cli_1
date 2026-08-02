@@ -1,4 +1,4 @@
-import { realpath } from 'node:fs/promises';
+import { realpath, open } from 'node:fs/promises';
 import { resolve, join, basename } from 'node:path';
 
 // 10 MB limits
@@ -8,16 +8,33 @@ export const MAX_WRITE_SIZE = 10 * 1024 * 1024;
 export async function validateWorkspaceBoundary(targetPath: string): Promise<string> {
   const cwd = process.cwd();
   const absoluteTarget = resolve(cwd, targetPath);
-  
+
   let realTarget;
   try {
     realTarget = await realpath(absoluteTarget);
   } catch (e: unknown) {
-    // If the file doesn't exist yet, we check the parent directory
+    // If the file (or any number of its parent directories) doesn't exist
+    // yet, walk up until we find the nearest existing ancestor, validate
+    // *that* is within the workspace, then rebuild the intended path from
+    // there. This supports creating files in brand-new nested directories.
     if ((e as any)?.code === 'ENOENT') {
-      const parentDir = resolve(absoluteTarget, '..');
-      const realParent = await realpath(parentDir);
-      realTarget = join(realParent, basename(absoluteTarget));
+      let dir = resolve(absoluteTarget, '..');
+      const relativeParts: string[] = [];
+      // Cap the walk so a pathological input can't loop forever.
+      for (let i = 0; i < 64; i++) {
+        try {
+          const realDir = await realpath(dir);
+          realTarget = join(realDir, ...relativeParts, basename(absoluteTarget));
+          break;
+        } catch (inner: unknown) {
+          if ((inner as any)?.code !== 'ENOENT') throw inner;
+          relativeParts.unshift(basename(dir));
+          const parent = resolve(dir, '..');
+          if (parent === dir) throw inner; // reached filesystem root, give up
+          dir = parent;
+        }
+      }
+      if (!realTarget) throw e;
     } else {
       throw e;
     }
@@ -33,10 +50,17 @@ export async function validateWorkspaceBoundary(targetPath: string): Promise<str
 }
 
 export async function isBinaryFile(filePath: string): Promise<boolean> {
-  const file = Bun.file(filePath);
-  if (!(await file.exists())) return false;
-  
-  const buffer = await file.slice(0, 8192).arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  return bytes.includes(0);
+  let handle;
+  try {
+    handle = await open(filePath, 'r');
+  } catch {
+    return false;
+  }
+  try {
+    const buffer = Buffer.alloc(8192);
+    const { bytesRead } = await handle.read(buffer, 0, 8192, 0);
+    return buffer.subarray(0, bytesRead).includes(0);
+  } finally {
+    await handle.close();
+  }
 }

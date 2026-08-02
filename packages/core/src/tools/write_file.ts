@@ -1,4 +1,6 @@
 import { Buffer } from 'node:buffer';
+import { stat, writeFile as fsWriteFile, mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { validateWorkspaceBoundary, MAX_WRITE_SIZE } from '../utils/fs-guard.ts';
 import type { ToolDefinition } from './types.ts';
 import { scanCode } from '../security/scanner.ts'; // zex: added for security-layer
@@ -64,9 +66,13 @@ export const writeFileTool: ToolDefinition = {
       MAX_SECURITY_RETRIES.delete(path);
 
       const realPath = await validateWorkspaceBoundary(path);
-      const file = Bun.file(realPath);
 
-      const isUpdate = await file.exists();
+      let isUpdate = true;
+      try {
+        await stat(realPath);
+      } catch {
+        isUpdate = false;
+      }
 
       // Log high findings as warnings (non-blocking)
       let warningPrefix = '';
@@ -95,7 +101,9 @@ export const writeFileTool: ToolDefinition = {
         });
       }
 
-      await Bun.write(realPath, content);
+      // Bun.write() auto-creates missing parent directories; replicate that here.
+      await mkdir(dirname(realPath), { recursive: true });
+      await fsWriteFile(realPath, content);
 
       const resultObj = {
         type: isUpdate ? 'update' : 'create',

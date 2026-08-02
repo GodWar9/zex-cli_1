@@ -1,23 +1,29 @@
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import type { Socket } from "node:net";
+import { WebSocketServer, type WebSocket } from "ws";
 import { ZexLLMOrchestrator } from "@zex/core/llm/orchestrator.ts";
 
-function verifyAuth(req: Request): boolean {
+// Runtime-agnostic (node:http + ws) — works under plain Node and under Bun.
+
+function headerValue(headers: IncomingMessage["headers"], name: string): string {
+  const v = headers[name];
+  if (Array.isArray(v)) return v[0] ?? "";
+  return v ?? "";
+}
+
+function verifyAuth(url: URL, headers: IncomingMessage["headers"]): boolean {
   const authToken = process.env.ZEX_AUTH_TOKEN;
   if (!authToken) {
     return process.env.ZEX_AUTH_REQUIRED !== 'true'; // fail closed when ZEX_AUTH_REQUIRED=true
   }
 
-  const authHeader = req.headers.get("Authorization") || req.headers.get("x-zex-auth-token") || "";
+  const authHeader = headerValue(headers, "authorization") || headerValue(headers, "x-zex-auth-token");
   const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
   if (token === authToken) return true;
 
-  try {
-    const url = new URL(req.url);
-    if (url.pathname.startsWith("/v1/ws/")) {
-      const queryToken = url.searchParams.get("token") || url.searchParams.get("auth");
-      if (queryToken === authToken) return true;
-    }
-  } catch {
-    // Ignore invalid URL parse for auth fallback.
+  if (url.pathname.startsWith("/v1/ws/")) {
+    const queryToken = url.searchParams.get("token") || url.searchParams.get("auth");
+    if (queryToken === authToken) return true;
   }
 
   return false;
@@ -58,7 +64,7 @@ function createOrchestrator() {
 
 const orchestrator = createOrchestrator();
 
-const activeWebSockets = new Map<string, any>();
+const activeWebSockets = new Map<string, WebSocket>();
 
 const TERMINAL_STATUSES = new Set(["completed", "failed"]);
 
@@ -81,163 +87,184 @@ function waitForTask(taskId: string, timeoutMs: number): Promise<boolean> {
   });
 }
 
-async function handleChat(req: Request): Promise<Response> {
-  try {
-    const body = (await req.json()) as any;
-    const { prompt, model, priority, deadline, sessionId } = body;
-
-    if (!prompt) {
-      return new Response(JSON.stringify({ error: "Prompt is required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-
-    const taskId = await orchestrator.queueTask(prompt, {
-      model,
-      priority,
-      deadline,
-      onChunk: (chunk: string) => {
-        if (sessionId) {
-          const ws = activeWebSockets.get(sessionId);
-          if (ws) {
-            ws.send(JSON.stringify({ type: "chunk", text: chunk, taskId }));
-          }
-        }
+function readJsonBody(req: IncomingMessage): Promise<any> {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    req.on("data", (chunk) => { data += chunk; });
+    req.on("end", () => {
+      try {
+        resolve(data ? JSON.parse(data) : {});
+      } catch (e) {
+        reject(e);
       }
     });
-
-    const task = orchestrator.taskQueue.get(taskId);
-    if (task) {
-      (task as any).sessionId = sessionId;
-    }
-
-    // Wait for completion (timeout after 30 seconds)
-    const completed = await waitForTask(taskId, 30000);
-    if (!completed) {
-      const task = orchestrator.taskQueue.get(taskId);
-      return new Response(
-        JSON.stringify({
-          error: "Task execution timeout",
-          taskId,
-          status: task?.status ?? "unknown"
-        }),
-        { status: 504, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    const currentTask = orchestrator.taskQueue.get(taskId);
-    if (!currentTask) {
-      return new Response(
-        JSON.stringify({ error: "Task not found after execution", taskId }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    if (currentTask.status === "failed") {
-      return new Response(
-        JSON.stringify({
-          error: currentTask.error || "Task failed execution",
-          taskId,
-          status: "failed"
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({
-        taskId,
-        status: currentTask.status,
-        response: currentTask.response || ""
-      }),
-      { headers: { "Content-Type": "application/json" } }
-    );
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    return new Response(
-      JSON.stringify({ error: `Invalid payload: ${msg}` }),
-      { status: 400, headers: { "Content-Type": "application/json" } }
-    );
-  }
+    req.on("error", reject);
+  });
 }
 
-const server = Bun.serve<{ sessionId: string }>({
-  port: process.env.PORT || 3000,
-  fetch(req, server) {
-    // Enable CORS
-    if (req.method === "OPTIONS") {
-      return new Response("OK", {
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization, x-zex-auth-token"
-        }
-      });
-    }
+function sendJson(res: ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*"
+  });
+  res.end(JSON.stringify(body));
+}
 
-    const url = new URL(req.url);
-
-    // Verify auth for ALL endpoints (including WebSocket)
-    if (!verifyAuth(req)) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        }
-      });
-    }
-
-    // Handle WebSocket upgrade
-    if (url.pathname.startsWith("/v1/ws/")) {
-      const sessionId = url.pathname.split("/").pop() || "";
-      const success = server.upgrade(req, {
-        data: { sessionId }
-      });
-      if (success) {
-        return undefined;
-      }
-      return new Response("WebSocket upgrade failed", { status: 400 });
-    }
-
-    const headers = {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*"
-    };
-
-    if (req.method === "POST" && url.pathname === "/v1/chat") {
-      return handleChat(req);
-    }
-
-    if (req.method === "GET" && url.pathname === "/v1/health") {
-      return new Response(JSON.stringify(orchestrator.getHealth()), { headers });
-    }
-
-    if (req.method === "GET" && url.pathname === "/v1/budget") {
-      return new Response(JSON.stringify(orchestrator.budgetManager.getBudgetReport()), { headers });
-    }
-
-    if (req.method === "GET" && url.pathname === "/v1/keys") {
-      return new Response(JSON.stringify(orchestrator.keyPool.getKeyStats()), { headers });
-    }
-
-    return new Response("Not Found", { status: 404, headers });
-  },
-  websocket: {
-    open(ws) {
-      const sessionId = (ws.data as any).sessionId;
-      activeWebSockets.set(sessionId, ws);
-      ws.send(JSON.stringify({ type: "status", message: `Connected to session ${sessionId}` }));
-    },
-    message(ws, message) {
-      // Optional message processing
-    },
-    close(ws, code, reason) {
-      const sessionId = (ws.data as any).sessionId;
-      activeWebSockets.delete(sessionId);
-    }
+async function handleChat(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  let body: any;
+  try {
+    body = await readJsonBody(req);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    sendJson(res, 400, { error: `Invalid payload: ${msg}` });
+    return;
   }
+
+  const { prompt, model, priority, deadline, sessionId } = body ?? {};
+
+  if (!prompt) {
+    sendJson(res, 400, { error: "Prompt is required" });
+    return;
+  }
+
+  const taskId = await orchestrator.queueTask(prompt, {
+    model,
+    priority,
+    deadline,
+    onChunk: (chunk: string) => {
+      if (sessionId) {
+        const ws = activeWebSockets.get(sessionId);
+        if (ws) {
+          ws.send(JSON.stringify({ type: "chunk", text: chunk, taskId }));
+        }
+      }
+    }
+  });
+
+  const task = orchestrator.taskQueue.get(taskId);
+  if (task) {
+    (task as any).sessionId = sessionId;
+  }
+
+  // Wait for completion (timeout after 30 seconds)
+  const completed = await waitForTask(taskId, 30000);
+  if (!completed) {
+    const pendingTask = orchestrator.taskQueue.get(taskId);
+    sendJson(res, 504, {
+      error: "Task execution timeout",
+      taskId,
+      status: pendingTask?.status ?? "unknown"
+    });
+    return;
+  }
+
+  const currentTask = orchestrator.taskQueue.get(taskId);
+  if (!currentTask) {
+    sendJson(res, 500, { error: "Task not found after execution", taskId });
+    return;
+  }
+
+  if (currentTask.status === "failed") {
+    sendJson(res, 500, {
+      error: currentTask.error || "Task failed execution",
+      taskId,
+      status: "failed"
+    });
+    return;
+  }
+
+  sendJson(res, 200, {
+    taskId,
+    status: currentTask.status,
+    response: currentTask.response || ""
+  });
+}
+
+const httpServer = createServer(async (req, res) => {
+  if (req.method === "OPTIONS") {
+    res.writeHead(200, {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, x-zex-auth-token"
+    });
+    res.end("OK");
+    return;
+  }
+
+  const url = new URL(req.url || "/", `http://${req.headers.host ?? "localhost"}`);
+
+  // Verify auth for ALL endpoints (including WebSocket upgrade attempts that
+  // fall through to here, e.g. a plain GET on a /v1/ws/ path)
+  if (!verifyAuth(url, req.headers)) {
+    sendJson(res, 401, { error: "Unauthorized" });
+    return;
+  }
+
+  // Real WebSocket upgrades are handled by the 'upgrade' event below and
+  // never reach this handler. Reaching here on a /v1/ws/ path means the
+  // client didn't send a proper Upgrade handshake.
+  if (url.pathname.startsWith("/v1/ws/")) {
+    res.writeHead(400, { "Access-Control-Allow-Origin": "*" });
+    res.end("WebSocket upgrade failed");
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/v1/chat") {
+    await handleChat(req, res);
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/v1/health") {
+    sendJson(res, 200, orchestrator.getHealth());
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/v1/budget") {
+    sendJson(res, 200, orchestrator.budgetManager.getBudgetReport());
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/v1/keys") {
+    sendJson(res, 200, orchestrator.keyPool.getKeyStats());
+    return;
+  }
+
+  res.writeHead(404, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+  res.end("Not Found");
+});
+
+const wss = new WebSocketServer({ noServer: true });
+
+httpServer.on("upgrade", (req: IncomingMessage, socket: Socket, head: Buffer) => {
+  const url = new URL(req.url || "/", `http://${req.headers.host ?? "localhost"}`);
+
+  if (!url.pathname.startsWith("/v1/ws/")) {
+    socket.destroy();
+    return;
+  }
+
+  if (!verifyAuth(url, req.headers)) {
+    socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+
+  const sessionId = url.pathname.split("/").pop() || "";
+
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    (ws as any).sessionId = sessionId;
+    wss.emit("connection", ws, req);
+  });
+});
+
+wss.on("connection", (ws: WebSocket & { sessionId?: string }) => {
+  const sessionId = ws.sessionId || "";
+  activeWebSockets.set(sessionId, ws);
+  ws.send(JSON.stringify({ type: "status", message: `Connected to session ${sessionId}` }));
+
+  ws.on("close", () => {
+    activeWebSockets.delete(sessionId);
+  });
 });
 
 // Periodic broadcasting of metrics
@@ -259,6 +286,20 @@ const metricsInterval = setInterval(() => {
     }
   }
 }, 2000);
+
+const boundPort = await new Promise<number>((resolve, reject) => {
+  httpServer.once("error", reject);
+  const requestedPort = Number(process.env.PORT) || 3000;
+  httpServer.listen(requestedPort, () => {
+    const addr = httpServer.address();
+    resolve(typeof addr === "object" && addr ? addr.port : requestedPort);
+  });
+});
+
+const server = {
+  port: boundPort,
+  stop: () => { httpServer.close(); wss.close(); }
+};
 
 console.log(`[Zex API Server] Running on http://localhost:${server.port}`);
 

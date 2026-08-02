@@ -1,6 +1,7 @@
 // ─── Agent runner ────────────────────────────────────────────────────────────
 
 import { streamResponse } from './stream.ts';
+import { spawnSync } from 'node:child_process';
 import { loadConfig } from '../config/index.ts';
 import type { ConversationMessage, ContentPart, StreamChunk, ToolCallPayload } from './types.ts';
 import { getTool } from '../tools/index.ts';
@@ -318,10 +319,10 @@ export async function runTurn(
              if ((tc.name === 'write_file' || tc.name === 'patch_file') && !res.isError) {
                try {
                  const filePath = tc.args.path || 'file';
-                 const gitAdd = Bun.spawnSync(['git', 'add', filePath], { cwd: process.cwd() });
-                 if (gitAdd.success) {
+                 const gitAdd = spawnSync('git', ['add', filePath], { cwd: process.cwd() });
+                 if (gitAdd.status === 0 && !gitAdd.error) {
                    const msg = `zex: ${tc.name} ${filePath}`;
-                   Bun.spawnSync(['git', 'commit', '-m', msg], { cwd: process.cwd() });
+                   spawnSync('git', ['commit', '-m', msg], { cwd: process.cwd() });
                  }
               } catch {
                 // fails silently if not a git repo or no git installed

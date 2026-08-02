@@ -3,6 +3,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { spawn } from 'node:child_process';
 
 export interface DepFinding {
   package: string;
@@ -37,13 +38,13 @@ export async function auditDependencies(projectRoot = process.cwd()): Promise<De
 
   try {
     const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-    const proc = Bun.spawn([npmCmd, 'audit', '--json'], {
-      cwd: projectRoot,
-      stdout: 'pipe',
-      stderr: 'pipe',
+    const stdout = await new Promise<string>((resolve, reject) => {
+      const proc = spawn(npmCmd, ['audit', '--json'], { cwd: projectRoot });
+      let out = '';
+      proc.stdout.on('data', (chunk) => { out += chunk; });
+      proc.on('error', reject);
+      proc.on('close', () => resolve(out));
     });
-    const stdout = await new Response(proc.stdout).text();
-    await proc.exited;
 
     const data = JSON.parse(stdout);
     const vulnerabilities = data.vulnerabilities ?? data.advisories ?? {};

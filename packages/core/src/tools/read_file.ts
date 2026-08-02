@@ -1,3 +1,4 @@
+import { stat, readFile } from 'node:fs/promises';
 import { validateWorkspaceBoundary, isBinaryFile, MAX_READ_SIZE } from '../utils/fs-guard.ts';
 import type { ToolDefinition } from './types.ts';
 
@@ -16,21 +17,23 @@ export const readFileTool: ToolDefinition = {
   execute: async ({ path, offset = 0, limit }: { path: string, offset?: number, limit?: number }) => {
     try {
       const realPath = await validateWorkspaceBoundary(path);
-      const file = Bun.file(realPath);
-      
-      if (!(await file.exists())) {
+
+      let stats;
+      try {
+        stats = await stat(realPath);
+      } catch {
         return { content: `Error: File not found at ${path}`, isError: true };
       }
 
-      if (file.size > MAX_READ_SIZE) {
-        return { content: `Error: File is too large (${file.size} bytes, max ${MAX_READ_SIZE} bytes)`, isError: true };
+      if (stats.size > MAX_READ_SIZE) {
+        return { content: `Error: File is too large (${stats.size} bytes, max ${MAX_READ_SIZE} bytes)`, isError: true };
       }
 
       if (await isBinaryFile(realPath)) {
         return { content: `Error: File appears to be binary or contains null bytes.`, isError: true };
       }
 
-      const content = await file.text();
+      const content = await readFile(realPath, 'utf-8');
       const lines = content.split('\n');
       
       const startIdx = Math.max(0, offset);

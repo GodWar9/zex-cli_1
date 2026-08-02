@@ -4,18 +4,7 @@ import 'dotenv/config';
 const args = process.argv.slice(2);
 
 if (args.includes('--serve') || args.includes('--server')) {
-  // Headless API server mode — no TUI required.
-  // NOTE: currently implemented on Bun.serve() and requires the Bun runtime.
-  // Tracked as a known limitation; a Node-native (http + ws) implementation
-  // is proposed as follow-up work so `--serve` also works under plain Node.
-  if (typeof (globalThis as any).Bun === 'undefined') {
-    console.error(
-      '[zex] --serve currently requires the Bun runtime (uses Bun.serve()).\n' +
-      '      Run it with: bunx zex --serve\n' +
-      '      (The interactive TUI — plain `zex` — works fine under Node.)'
-    );
-    process.exit(1);
-  }
+  // Headless API server mode — no TUI required
   const { shutdown } = await import('./api/server.ts');
   process.on('SIGINT', () => { shutdown(); process.exit(0); });
   process.on('SIGTERM', () => { shutdown(); process.exit(0); });
@@ -28,7 +17,7 @@ if (args.includes('--serve') || args.includes('--server')) {
 
 Usage:
   zex                 Launch the interactive TUI
-  zex --serve         Run headless API server (port: PORT or 3000) — requires Bun runtime
+  zex --serve         Run headless API server (port: PORT or 3000)
   zex --version, -v   Print version
   zex --help, -h      Show this help
 

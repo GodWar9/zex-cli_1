@@ -12,6 +12,7 @@
 // IMPORTANT: The runner.ts permission gate (Y/n prompt) fires BEFORE this
 // executes. The user must approve every single command.
 
+import { spawn } from 'node:child_process';
 import type { ToolDefinition, ToolResult } from './types.ts';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -96,32 +97,46 @@ The user will be shown the exact command and asked to approve it before it runs.
 
     try {
       const shell = getShell();
-      const proc = Bun.spawn([...shell, command], {
-        cwd,
-        stdout: 'pipe',
-        stderr: 'pipe',
-        env: Object.fromEntries(
-          Object.entries(process.env).filter((e): e is [string, string] => e[1] !== undefined)
-        ),
+      const [shellCmd, ...shellArgs] = shell;
+
+      const cleanEnv = Object.fromEntries(
+        Object.entries(process.env).filter((e): e is [string, string] => e[1] !== undefined)
+      );
+
+      const { stdoutText, stderrText, code } = await new Promise<{
+        stdoutText: string;
+        stderrText: string;
+        code: number | null;
+      }>((resolve, reject) => {
+        const proc = spawn(shellCmd!, [...shellArgs, command], {
+          cwd,
+          env: cleanEnv,
+        });
+
+        let out = '';
+        let err = '';
+        proc.stdout.on('data', (chunk) => { out += chunk; });
+        proc.stderr.on('data', (chunk) => { err += chunk; });
+
+        const timeoutHandle = setTimeout(() => {
+          timedOut = true;
+          proc.kill();
+        }, timeoutMs);
+
+        proc.on('error', (spawnErr) => {
+          clearTimeout(timeoutHandle);
+          reject(spawnErr);
+        });
+
+        proc.on('close', (exitCodeValue) => {
+          clearTimeout(timeoutHandle);
+          resolve({ stdoutText: out, stderrText: err, code: exitCodeValue });
+        });
       });
-
-      // Race: either the process finishes or we kill it after timeout
-      const timeoutHandle = setTimeout(() => {
-        timedOut = true;
-        proc.kill();
-      }, timeoutMs);
-
-      const [stdoutText, stderrText] = await Promise.all([
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-      ]);
-
-      await proc.exited;
-      clearTimeout(timeoutHandle);
 
       stdout  = truncate(stdoutText.trimEnd(), 'stdout');
       stderr  = truncate(stderrText.trimEnd(), 'stderr');
-      exitCode = proc.exitCode;
+      exitCode = code;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       return {

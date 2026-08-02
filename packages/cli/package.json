@@ -14,12 +14,16 @@
     "node": ">=22.6.0"
   },
   "scripts": {
-    "build": "bun build src/index.tsx --outfile dist/cli.js --target node --format esm --production --external react --external react-devtools-core --external ink --external dotenv --external openai --external @anthropic-ai/sdk --external @google/generative-ai --external js-tiktoken --external @toon-format/toon --banner \"#!/usr/bin/env node\" && node -e \"try{require('fs').chmodSync('dist/cli.js',0o755)}catch(e){}\"",
+    "build": "bun build src/index.tsx --outfile dist/cli.js --target node --format esm --production --external react --external react-devtools-core --external ink --external dotenv --external openai --external @anthropic-ai/sdk --external @google/generative-ai --external js-tiktoken --external @toon-format/toon --external ws --banner \"#!/usr/bin/env node\" && node -e \"try{require('fs').chmodSync('dist/cli.js',0o755)}catch(e){}\"",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@zex/core": "^0.1.0",
     "ink": "7.1.0",
-    "react": "^19.2.7"
+    "react": "^19.2.7",
+    "ws": "^8.21.1"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
   }
 }
