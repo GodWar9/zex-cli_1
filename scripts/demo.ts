@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { buildPrunedSystemPrompt, estimateTokens } from '../packages/core/src/agent/pruner.ts';
+import { scanCode } from '../packages/core/src/security/scanner.ts';
+import type { ConversationMessage } from '../packages/core/src/agent/types.ts';
+const history: ConversationMessage[] = [{ role: 'user', content: 'Read and explain this project.' }];
+const tools = ['read_file', 'write_file', 'run_shell_command'];
+const first = estimateTokens(buildPrunedSystemPrompt(history, tools));
+const loopback = estimateTokens(buildPrunedSystemPrompt([...history, { role: 'tool', content: 'Example file content', toolCallId: 'demo' }], tools));
+assert.ok(loopback < first);
+const findings = scanCode('eval(userInput);');
+assert.ok(findings.some(finding => finding.severity === 'critical'));
+console.log('Zex offline demonstration: no API keys or model requests');
+console.log('Prompt tokens: first turn=' + first + ', tool-result turn=' + loopback);
+console.log('Illustrative reduction: ' + ((1 - loopback / first) * 100).toFixed(1) + '% (not measured API savings)');
+console.log('Scanner: ' + findings.map(finding => finding.severity + ': ' + finding.label).join('; '));
+console.log('PASS: real prompt selection and security scanning. Run npm run ci for the full gate.');

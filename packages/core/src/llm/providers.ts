@@ -30,33 +30,22 @@ export interface ChatResponse {
 }
 
 export class OpenAIProvider implements IEnterpriseProvider {
-  private client?: OpenAI;
+  private client: OpenAI;
 
   constructor(apiKey: string) {
-    if (apiKey !== "sk-test") {
-      this.client = new OpenAI({ apiKey });
-    }
+    this.client = new OpenAI({ apiKey });
   }
 
   async chat(
     messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
     options: ProviderChatOptions
   ): Promise<ChatResponse> {
-    if (!this.client) {
-      options.onChunk?.("Mock OpenAI response text");
-      return {
-        text: "Mock OpenAI response text",
-        usage: { prompt_tokens: 10, completion_tokens: 5 },
-        model: options.model
-      };
-    }
-
     try {
       const response = await this.client.chat.completions.create({
         model: options.model,
         messages: messages.map(m => ({ role: m.role as any, content: m.content })),
         max_tokens: options.maxTokens || 2000,
-        temperature: options.temperature || 0.7,
+        temperature: options.temperature ?? 0.7,
         stream: false
       });
 
@@ -108,27 +97,16 @@ export class OpenAIProvider implements IEnterpriseProvider {
 }
 
 export class AnthropicProvider implements IEnterpriseProvider {
-  private client?: Anthropic;
+  private client: Anthropic;
 
   constructor(apiKey: string) {
-    if (apiKey !== "claude-test") {
-      this.client = new Anthropic({ apiKey });
-    }
+    this.client = new Anthropic({ apiKey });
   }
 
   async chat(
     messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
     options: ProviderChatOptions
   ): Promise<ChatResponse> {
-    if (!this.client) {
-      options.onChunk?.("Mock Anthropic response text");
-      return {
-        text: "Mock Anthropic response text",
-        usage: { prompt_tokens: 12, completion_tokens: 6 },
-        model: options.model
-      };
-    }
-
     try {
       const systemMessage = messages.find(m => m.role === "system")?.content || "";
       const userMessages = messages.filter(m => m.role !== "system");
@@ -136,7 +114,7 @@ export class AnthropicProvider implements IEnterpriseProvider {
       const response = await this.client.messages.create({
         model: options.model,
         max_tokens: options.maxTokens || 2000,
-        temperature: options.temperature || 0.7,
+        temperature: options.temperature ?? 0.7,
         system: systemMessage || undefined,
         messages: userMessages.map(m => ({ role: m.role as any, content: m.content }))
       });
@@ -183,27 +161,16 @@ export class AnthropicProvider implements IEnterpriseProvider {
 }
 
 export class GeminiProvider implements IEnterpriseProvider {
-  private client?: GoogleGenerativeAI;
+  private client: GoogleGenerativeAI;
 
   constructor(apiKey: string) {
-    if (apiKey !== "gemini-test") {
-      this.client = new GoogleGenerativeAI(apiKey);
-    }
+    this.client = new GoogleGenerativeAI(apiKey);
   }
 
   async chat(
     messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
     options: ProviderChatOptions
   ): Promise<ChatResponse> {
-    if (!this.client) {
-      options.onChunk?.("Mock Gemini response text");
-      return {
-        text: "Mock Gemini response text",
-        usage: { prompt_tokens: 8, completion_tokens: 4 },
-        model: options.model
-      };
-    }
-
     try {
       const model = this.client.getGenerativeModel({ model: options.model });
 
@@ -221,7 +188,7 @@ export class GeminiProvider implements IEnterpriseProvider {
         systemInstruction,
         generationConfig: {
           maxOutputTokens: options.maxTokens || 2000,
-          temperature: options.temperature || 0.7
+          temperature: options.temperature ?? 0.7
         }
       });
 

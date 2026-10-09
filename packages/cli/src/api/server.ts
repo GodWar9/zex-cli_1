@@ -1,9 +1,15 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { Socket } from "node:net";
 import { WebSocketServer, type WebSocket } from "ws";
-import { ZexLLMOrchestrator } from "@zex/core/llm/orchestrator.ts";
+import { ZexLLMOrchestrator } from "@sahil/zex-core/llm/orchestrator.ts";
 
 // Runtime-agnostic (node:http + ws) — works under plain Node and under Bun.
+const authToken = process.env.ZEX_AUTH_TOKEN;
+if (!authToken || authToken.length < 32) throw new Error('ZEX_AUTH_TOKEN is required and must be at least 32 characters');
+const requestedPort = Number(process.env.PORT ?? 3000);
+if (!Number.isInteger(requestedPort) || requestedPort < 0 || requestedPort > 65535) throw new Error('Invalid PORT');
+const dailyBudgetUSD = Number(process.env.DAILY_BUDGET_USD ?? 10);
+if (!Number.isFinite(dailyBudgetUSD) || dailyBudgetUSD <= 0) throw new Error('Invalid DAILY_BUDGET_USD');
 
 function headerValue(headers: IncomingMessage["headers"], name: string): string {
   const v = headers[name];
@@ -12,10 +18,7 @@ function headerValue(headers: IncomingMessage["headers"], name: string): string 
 }
 
 function verifyAuth(url: URL, headers: IncomingMessage["headers"]): boolean {
-  const authToken = process.env.ZEX_AUTH_TOKEN;
-  if (!authToken) {
-    return process.env.ZEX_AUTH_REQUIRED !== 'true'; // fail closed when ZEX_AUTH_REQUIRED=true
-  }
+  if (!authToken) return false;
 
   const authHeader = headerValue(headers, "authorization") || headerValue(headers, "x-zex-auth-token");
   const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
@@ -57,7 +60,7 @@ function createOrchestrator() {
   }
   return new ZexLLMOrchestrator({
     keys: keysConfig,
-    dailyBudgetUSD: 10.0,
+    dailyBudgetUSD,
     maxConcurrentRequests: 5
   });
 }
@@ -87,18 +90,27 @@ function waitForTask(taskId: string, timeoutMs: number): Promise<boolean> {
   });
 }
 
-function readJsonBody(req: IncomingMessage): Promise<any> {
+function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
-    let data = "";
-    req.on("data", (chunk) => { data += chunk; });
-    req.on("end", () => {
-      try {
-        resolve(data ? JSON.parse(data) : {});
-      } catch (e) {
-        reject(e);
-      }
+    const chunks: Buffer[] = [];
+    let bytes = 0;
+    let overflow = false;
+    req.on('data', (chunk: Buffer) => {
+      if (overflow) return;
+      bytes += chunk.length;
+      if (bytes > 1024 * 1024) {
+        overflow = true;
+        chunks.length = 0;
+        reject(new Error('Request body too large'));
+      } else chunks.push(chunk);
     });
-    req.on("error", reject);
+    req.on('end', () => {
+      if (overflow) return;
+      try { resolve(bytes ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {}); }
+      catch (error) { reject(error); }
+    });
+    req.on('error', reject);
+    req.on('aborted', () => reject(new Error('Request aborted')));
   });
 }
 
@@ -111,20 +123,25 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 }
 
 async function handleChat(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  let body: any;
+  let body: unknown;
   try {
     body = await readJsonBody(req);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    sendJson(res, 400, { error: `Invalid payload: ${msg}` });
+    sendJson(res, msg === 'Request body too large' ? 413 : 400, { error: msg === 'Request body too large' ? msg : 'Invalid JSON payload' });
     return;
   }
 
-  const { prompt, model, priority, deadline, sessionId } = body ?? {};
-
-  if (!prompt) {
-    sendJson(res, 400, { error: "Prompt is required" });
-    return;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    sendJson(res, 400, { error: 'Expected a JSON object' }); return;
+  }
+  const { prompt, model, priority, deadline, sessionId } = body as Record<string, unknown>;
+  if (typeof prompt !== 'string' || !prompt.trim() || prompt.length > 32000 ||
+      (model !== undefined && (typeof model !== 'string' || !model || model.length > 128)) ||
+      (priority !== undefined && (typeof priority !== 'number' || !Number.isInteger(priority) || priority < 0 || priority > 10)) ||
+      (deadline !== undefined && (typeof deadline !== 'number' || !Number.isFinite(deadline) || deadline < 0)) ||
+      (sessionId !== undefined && (typeof sessionId !== 'string' || sessionId.length > 128))) {
+    sendJson(res, 400, { error: 'Invalid chat parameters' }); return;
   }
 
   const taskId = await orchestrator.queueTask(prompt, {
@@ -180,7 +197,7 @@ async function handleChat(req: IncomingMessage, res: ServerResponse): Promise<vo
   });
 }
 
-const httpServer = createServer(async (req, res) => {
+async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === "OPTIONS") {
     res.writeHead(200, {
       "Access-Control-Allow-Origin": "*",
@@ -191,7 +208,7 @@ const httpServer = createServer(async (req, res) => {
     return;
   }
 
-  const url = new URL(req.url || "/", `http://${req.headers.host ?? "localhost"}`);
+  const url = new URL(req.url || "/", "http://localhost");
 
   // Verify auth for ALL endpoints (including WebSocket upgrade attempts that
   // fall through to here, e.g. a plain GET on a /v1/ws/ path)
@@ -230,13 +247,23 @@ const httpServer = createServer(async (req, res) => {
   }
 
   res.writeHead(404, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
-  res.end("Not Found");
+  res.end(JSON.stringify({ error: 'Not found' }));
+}
+const httpServer = createServer((req, res) => {
+  void handleRequest(req, res).catch(() => {
+    if (!res.headersSent) sendJson(res, 500, { error: 'Request failed' });
+    else res.end();
+  });
 });
+httpServer.requestTimeout = 30_000;
+httpServer.headersTimeout = 10_000;
 
 const wss = new WebSocketServer({ noServer: true });
 
 httpServer.on("upgrade", (req: IncomingMessage, socket: Socket, head: Buffer) => {
-  const url = new URL(req.url || "/", `http://${req.headers.host ?? "localhost"}`);
+  let url: URL;
+  try { url = new URL(req.url || "/", "http://localhost"); }
+  catch { socket.destroy(); return; }
 
   if (!url.pathname.startsWith("/v1/ws/")) {
     socket.destroy();
@@ -250,6 +277,7 @@ httpServer.on("upgrade", (req: IncomingMessage, socket: Socket, head: Buffer) =>
   }
 
   const sessionId = url.pathname.split("/").pop() || "";
+  if (!sessionId || sessionId.length > 128) { socket.destroy(); return; }
 
   wss.handleUpgrade(req, socket, head, (ws) => {
     (ws as any).sessionId = sessionId;
@@ -259,11 +287,13 @@ httpServer.on("upgrade", (req: IncomingMessage, socket: Socket, head: Buffer) =>
 
 wss.on("connection", (ws: WebSocket & { sessionId?: string }) => {
   const sessionId = ws.sessionId || "";
+  activeWebSockets.get(sessionId)?.close();
   activeWebSockets.set(sessionId, ws);
+  ws.on("error", () => ws.close());
   ws.send(JSON.stringify({ type: "status", message: `Connected to session ${sessionId}` }));
 
   ws.on("close", () => {
-    activeWebSockets.delete(sessionId);
+    if (activeWebSockets.get(sessionId) === ws) activeWebSockets.delete(sessionId);
   });
 });
 
@@ -289,8 +319,12 @@ const metricsInterval = setInterval(() => {
 
 const boundPort = await new Promise<number>((resolve, reject) => {
   httpServer.once("error", reject);
-  const requestedPort = Number(process.env.PORT) || 3000;
-  httpServer.listen(requestedPort, () => {
+  const host = process.env.ZEX_HOST || "127.0.0.1";
+  if (!["127.0.0.1", "localhost", "::1"].includes(host) && !process.env.ZEX_AUTH_TOKEN) {
+    reject(new Error("ZEX_AUTH_TOKEN is required when ZEX_HOST exposes the server beyond loopback"));
+    return;
+  }
+  httpServer.listen(requestedPort, host, () => {
     const addr = httpServer.address();
     resolve(typeof addr === "object" && addr ? addr.port : requestedPort);
   });

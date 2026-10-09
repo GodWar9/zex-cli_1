@@ -1,5 +1,5 @@
 {
-  "name": "zex",
+  "name": "@sahil/zex",
   "version": "0.1.0",
   "description": "ZEX — Autonomous AI coding agent for the terminal",
   "type": "module",
@@ -8,22 +8,39 @@
   },
   "files": [
     "dist/",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
-    "node": ">=22.6.0"
+    "node": ">=24.12.0"
   },
   "scripts": {
     "build": "bun build src/index.tsx --outfile dist/cli.js --target node --format esm --production --external react --external react-devtools-core --external ink --external dotenv --external openai --external @anthropic-ai/sdk --external @google/generative-ai --external js-tiktoken --external @toon-format/toon --external ws --banner \"#!/usr/bin/env node\" && node -e \"try{require('fs').chmodSync('dist/cli.js',0o755)}catch(e){}\"",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "prepack": "npm run build"
   },
   "dependencies": {
-    "@zex/core": "^0.1.0",
+    "@anthropic-ai/sdk": "^0.104.1",
+    "@google/generative-ai": "0.24.0",
+    "@toon-format/toon": "^2.1.0",
+    "dotenv": "^17.4.2",
+    "js-tiktoken": "^1.0.21",
+    "openai": "^6.33.0",
+    "@sahil/zex-core": "^0.1.0",
     "ink": "7.1.0",
     "react": "^19.2.7",
     "ws": "^8.21.1"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GodWar9/zex-cli_1.git",
+    "directory": "packages/cli"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

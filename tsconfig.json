@@ -30,6 +30,8 @@
     "test-offline.ts",
     "test-enterprise.ts",
     "test-integration.ts",
-    "benchmarks/run-benchmark.ts"
+    "benchmarks/run-benchmark.ts",
+    "test-providers.ts",
+    "scripts/demo.ts"
   ]
 }

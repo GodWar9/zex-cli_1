@@ -1,5 +1,5 @@
 {
-  "name": "@zex/core",
+  "name": "@sahil/zex-core",
   "version": "0.1.0",
   "description": "ZEX core library — agent orchestration, LLM providers, tools, security",
   "type": "module",
@@ -15,17 +15,19 @@
   "files": [
     "dist/",
     "src/",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
-    "node": ">=22.6.0"
+    "node": ">=24.12.0"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "prepack": "npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
@@ -34,5 +36,11 @@
     "dotenv": "^17.4.2",
     "js-tiktoken": "^1.0.21",
     "openai": "^6.33.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GodWar9/zex-cli_1.git",
+    "directory": "packages/core"
   }
 }

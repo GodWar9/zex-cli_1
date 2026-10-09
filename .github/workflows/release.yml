@@ -1,59 +1,45 @@
 name: Release
-
 on:
   push:
-    tags: ["v*"]
-
+    tags: ['v*']
+permissions:
+  contents: read
 jobs:
   release:
     strategy:
+      fail-fast: false
       matrix:
-        os:
-          - name: linux
-            runner: ubuntu-latest
-          - name: macos
-            runner: macos-latest
-          - name: windows
-            runner: windows-latest
-    runs-on: ${{ matrix.os.runner }}
-
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.12.0'
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-
-      - run: bun install --frozen-lockfile
-
-      - name: Typecheck
-        run: bun run typecheck
-
-      - name: Run tests
-        run: bun run test
-
-      - name: Build binary
-        run: bun run build
-
+          bun-version: '1.3.12'
+      - run: bun install --frozen-lockfile --linker hoisted
+      - run: npm run ci
+      - run: npm run build:ci
       - uses: actions/upload-artifact@v4
         with:
-          name: zex-${{ matrix.os.name }}
-          path: dist/zex*
-
-  publish:
+          name: zex-${{ matrix.os }}
+          path: dist/zex-*
+          if-no-files-found: error
+  draft:
     runs-on: ubuntu-latest
     needs: [release]
     permissions:
       contents: write
-
     steps:
       - uses: actions/download-artifact@v4
         with:
           pattern: zex-*
           merge-multiple: true
-
-      - name: Create release
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
           files: zex-*
+          fail_on_unmatched_files: true
+          draft: true
           generate_release_notes: true

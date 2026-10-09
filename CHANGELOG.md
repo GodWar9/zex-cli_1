@@ -8,6 +8,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- Require a 32-character API token on every bind; validate request fields, startup settings and body limits.
+- Remove production mock responses triggered by special credential strings; preserve temperature zero.
+- Publish under the requested @sahil scope with declared runtime dependencies and package licenses.
+- Give standalone binaries distinct OS/architecture names and prepare draft releases only.
+
+### Release verification
+
+- Add a no-key demonstration, six SDK transport regressions and isolated npm-tarball runtime checks.
+- Test the supported Node 24.12 minimum and current Node 24 across Linux, macOS and Windows in CI.
+- Correct benchmark, approval-boundary and Bun-runtime claims in documentation.
+
+### Earlier fixes
+
 - CI typecheck failure caused by a fragile `Parameters<typeof test>` type extraction against an overloaded `node:test` signature — replaced with the exported `TestFn` type.
 - Nightly integration workflow failing on every scheduled run: a missing provider API key hard-failed that provider's live-adapter test instead of skipping it, so any partially-configured (or unconfigured) set of `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` secrets always produced failures. Now skips per-provider when that provider's key isn't set, and still fails loudly on a genuinely invalid key.
 - `--serve` crashed under plain Node (`Bun.serve()` doesn't exist outside Bun). Rewrote the headless API server on `node:http` + `ws`, working identically under both Node and Bun — same routes, auth, WebSocket streaming, and metrics broadcast.
@@ -18,9 +31,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
-- `packages/core/src/index.ts` — the package previously had no public entrypoint at all; `import { ... } from "@zex/core"` would fail instantly.
-- A real `tsc` build pipeline for `@zex/core` (`packages/core/tsconfig.json`, `dist/` output with `.d.ts` declarations), so `@zex/core` can be `npm install`ed and imported as a standalone library, not only consumed from inside this monorepo.
-- A working, cross-platform-safe build for the `zex` CLI's npm-publishable binary (`packages/cli` `dist/cli.js`, compiled from TSX with a real shebang, externalizing genuine npm dependencies while bundling `@zex/core`'s source in at build time — since Node refuses to type-strip `.ts` files once they're inside `node_modules`, this is what actually makes `npx zex` work post-install).
+- `packages/core/src/index.ts` — the package previously had no public entrypoint at all; `import { ... } from "@sahil/zex-core"` would fail instantly.
+- A real `tsc` build pipeline for `@sahil/zex-core` (`packages/core/tsconfig.json`, `dist/` output with `.d.ts` declarations), so `@sahil/zex-core` can be `npm install`ed and imported as a standalone library, not only consumed from inside this monorepo.
+- A working, cross-platform-safe build for the `zex` CLI's npm-publishable binary (`packages/cli` `dist/cli.js`, compiled from TSX with a real shebang, externalizing genuine npm dependencies while bundling `@sahil/zex-core`'s source in at build time — since Node refuses to type-strip `.ts` files once they're inside `node_modules`, this is what actually makes `npx @sahil/zex` work post-install).
 - READMEs for both publishable packages (`packages/core/README.md`, `packages/cli/README.md`) with install instructions, quickstarts, and API references.
 - CI now builds both publishable packages (`build:packages`) on every push, catching packaging regressions automatically instead of only via manual verification.
 

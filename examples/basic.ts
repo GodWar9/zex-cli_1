@@ -1,8 +1,8 @@
 // ─── Basic ZEX Example ──────────────────────────────────────────────────────
 // Run with: node examples/basic.ts   (requires Node >= 22.6.0)
 //
-// This shows how to use @zex/core programmatically as a real npm consumer
-// would — via `npm install @zex/core`, not a relative monorepo path:
+// This shows how to use @sahil/zex-core programmatically as a real npm consumer
+// would — via `npm install @sahil/zex-core`, not a relative monorepo path:
 //   1. Create an orchestrator with provider keys
 //   2. Queue a task
 //   3. Wait for the result
@@ -10,7 +10,7 @@
 // Requires at least one of OPENAI_API_KEY, ANTHROPIC_API_KEY, or
 // GEMINI_API_KEY to be set in the environment or .env file.
 
-import { ZexOrchestrator } from '@zex/core';
+import { ZexOrchestrator } from '@sahil/zex-core';
 
 // Gather API keys from environment. Provider is just a string — any
 // registered provider works, not only the three built-ins.

@@ -1,13 +1,13 @@
 /**
- * @zex/core — public API
+ * @sahil/zex-core — public API
  *
  * This is the ONLY supported entrypoint for consumers doing
- * `import { ... } from "@zex/core"`. Anything not re-exported here is an
+ * `import { ... } from "@sahil/zex-core"`. Anything not re-exported here is an
  * internal implementation detail and may change without a semver-major bump.
  *
  * Quickstart:
  *
- *   import { ZexOrchestrator } from "@zex/core";
+ *   import { ZexOrchestrator } from "@sahil/zex-core";
  *
  *   const orchestrator = new ZexOrchestrator({
  *     keys: [{ provider: "openai", apiKey: process.env.OPENAI_API_KEY! }],

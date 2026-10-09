@@ -1,53 +1,22 @@
-# zex
+# @sahil/zex
 
-Autonomous AI coding agent for the terminal. Built on [`@zex/core`](https://www.npmjs.com/package/@zex/core).
+Terminal coding assistant and authenticated headless API. Pre-release: not yet published.
 
-## Install
+After publication: `npm install -g @sahil/zex` or `npx @sahil/zex`. Requires Node.js 24.12+. Bun is only needed to build from source.
 
-```bash
-npm install -g zex
-# or, without installing:
-npx zex
+```text
+zex                 Interactive terminal UI
+zex --serve         Node HTTP/WebSocket API
+zex --version       Version
+zex --help          Help
 ```
 
-Requires Node.js **>= 22.6.0**.
+Set `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY` for real model calls, which may incur charges.
 
-## Quickstart
+For `--serve`, set `ZEX_AUTH_TOKEN` to a random secret of at least 32 characters. Every API request requires `Authorization: Bearer <token>`. Default bind: `127.0.0.1:3000`; configure with `ZEX_HOST` and `PORT`. Public hosting needs TLS.
 
-```bash
-export OPENAI_API_KEY=sk-...   # or ANTHROPIC_API_KEY / GEMINI_API_KEY
-npx zex
-```
+`GET /v1/health` reports status. `POST /v1/chat` takes `{"prompt":"Explain event loops"}`. `DAILY_BUDGET_USD` defaults to 10; accounting is in memory and resets on restart, not a provider billing cap.
 
-That launches the interactive TUI. Type a request and zex will plan, write
-code, run tests, and ask for approval before touching files.
+The interactive assistant can edit files and run shell commands. Use trusted projects. Security scanning is heuristic; plan mode is advisory. The headless API is for a single trusted operator and does not expose all terminal tools.
 
-## CLI usage
-
-```
-zex                 Launch the interactive TUI
-zex --serve         Run headless API server (port: PORT or 3000) — requires Bun runtime
-zex --version, -v   Print version
-zex --help, -h      Show this help
-```
-
-> **Known limitation:** `--serve` currently requires the [Bun](https://bun.sh)
-> runtime (`bunx zex --serve`) — it uses `Bun.serve()` internally. The
-> interactive TUI (plain `zex`) works fine under standard Node.js. A
-> Node-native implementation of `--serve` is a proposed follow-up.
-
-### Environment variables
-
-| Variable | Purpose |
-|---|---|
-| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | Provider credentials — zex auto-detects which to use |
-| `ZEX_AUTH_REQUIRED` | Set `"true"` to fail closed when no API-server token is configured |
-| `ZEX_AUTH_TOKEN` | Bearer token for the headless API server |
-| `PORT` | API server port (default `3000`) |
-| `DAILY_BUDGET_USD` | Daily spending cap (default `10.0`) |
-
-## Building a custom agent on top of zex
-
-If you want the orchestration engine without the TUI, use
-[`@zex/core`](https://www.npmjs.com/package/@zex/core) directly — see its
-README for the programmatic API.
+For a no-key demo, architecture and release evidence, see [the repository](https://github.com/GodWar9/zex-cli_1).

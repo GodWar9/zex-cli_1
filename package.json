@@ -11,14 +11,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zex-cli/zex.git"
+    "url": "git+https://github.com/GodWar9/zex-cli_1.git"
   },
   "scripts": {
     "postinstall": "node -e \"const fs=require('fs'); const paths=['node_modules/ink/package.json','packages/cli/node_modules/ink/package.json']; if(!paths.some(p=>fs.existsSync(p))){console.error('\\n⚠ node_modules incomplete — run: npm install\\n');process.exit(1)}\"",
     "dev": "bun run packages/cli/src/index.tsx",
     "start": "bun run packages/cli/src/index.tsx",
     "build": "bun build packages/cli/src/index.tsx --compile --outfile dist/zex",
-    "build:ci": "node -e \"const p=process.platform; require('child_process').execSync('bun build packages/cli/src/index.tsx --compile --outfile dist/zex'+(p==='win32'?'.exe':''),{stdio:'inherit'})\"",
+    "build:ci": "node scripts/build-binary.mjs",
     "build:core": "cd packages/core && bun run build",
     "build:cli-npm": "cd packages/cli && bun run build",
     "build:packages": "npm run build:core && npm run build:cli-npm",
@@ -26,9 +26,12 @@
     "test": "node --experimental-strip-types --test test-offline.ts",
     "test:enterprise": "node --experimental-strip-types --test test-enterprise.ts",
     "test:integration": "node --experimental-strip-types --test test-integration.ts",
-    "ci": "tsc --noEmit && node --experimental-strip-types --test test-offline.ts && npm run build:packages",
+    "ci": "npm run typecheck && npm test && npm run test:providers && npm run test:enterprise && npm run test:package",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build:ci && npm run ci"
+    "prepublishOnly": "npm run build:ci && npm run ci",
+    "test:package": "node scripts/check-packages.mjs",
+    "test:providers": "node --experimental-strip-types --test test-providers.ts",
+    "demo": "node --experimental-strip-types scripts/demo.ts"
   },
   "devDependencies": {
     "@types/bun": "1.3.14",
@@ -43,5 +46,8 @@
   },
   "dependencies": {
     "@google/generative-ai": "0.24.0"
+  },
+  "engines": {
+    "node": ">=24.12.0"
   }
 }

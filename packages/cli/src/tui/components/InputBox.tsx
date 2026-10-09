@@ -1,8 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Box, Text, useInput, useStdout } from 'ink';
 import { theme } from '../theme.ts';
-import { parseFileRefs, formatRefsSummary, parseImageRefs } from '@zex/core/utils/fileRefs.ts';
-import type { ImageAttachment } from '@zex/core/utils/fileRefs.ts';
+import { parseFileRefs, formatRefsSummary, parseImageRefs } from '@sahil/zex-core/utils/fileRefs.ts';
+import type { ImageAttachment } from '@sahil/zex-core/utils/fileRefs.ts';
 
 export type { ImageAttachment };
 

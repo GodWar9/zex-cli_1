@@ -1,11 +1,11 @@
 // ─── Enterprise Orchestrator & Server E2E Verification ──────────────────────────
 // Run with: bun run test-enterprise.ts
 // Verifies schedulers, token budgeting, key pools, failover classification,
-// and the Bun.serve REST / WebSocket backend.
+// and the Node-native REST / WebSocket backend with an injected test provider.
 
 process.env.PORT = "3051";
 process.env.OPENAI_API_KEY = "sk-test";
-process.env.ZEX_AUTH_TOKEN = "test-secret-token";
+process.env.ZEX_AUTH_TOKEN = "test-secret-token-at-least-32-characters";
 
 import { AdvancedTokenizer } from "./packages/core/src/llm/tokenizer.ts";
 import { CostCalculator } from "./packages/core/src/llm/costCalculator.ts";
@@ -22,6 +22,14 @@ async function importServer() {
   orchestrator = module.orchestrator;
 }
 
+// The mock belongs to this test process, never to production API-key handling.
+const { registerEnterpriseProvider } = await import('./packages/core/src/llm/providers.ts');
+registerEnterpriseProvider('openai', class {
+  async chat(_messages: unknown, options: { model: string; onChunk?: (text: string) => void }) {
+    options.onChunk?.('Mock OpenAI response text');
+    return { text: 'Mock OpenAI response text', usage: { prompt_tokens: 10, completion_tokens: 5 }, model: options.model };
+  }
+});
 await importServer();
 
 const GREEN = '\x1b[32m';
@@ -298,7 +306,7 @@ try {
   }
 
   const goodHealth = await fetch(`${baseUrl}/v1/health`, {
-    headers: { "Authorization": "Bearer test-secret-token" }
+    headers: { "Authorization": "Bearer test-secret-token-at-least-32-characters" }
   });
   if (goodHealth.status === 200) {
     const data = await goodHealth.json() as any;
@@ -313,7 +321,7 @@ try {
 
   // Check budget report endpoint
   const budgetRes = await fetch(`${baseUrl}/v1/budget`, {
-    headers: { "x-zex-auth-token": "test-secret-token" }
+    headers: { "x-zex-auth-token": "test-secret-token-at-least-32-characters" }
   });
   if (budgetRes.status === 200) {
     const budgetReport = await budgetRes.json() as any;
@@ -328,7 +336,7 @@ try {
 
   // Check key pool stats endpoint
   const keysRes = await fetch(`${baseUrl}/v1/keys`, {
-    headers: { "Authorization": "Bearer test-secret-token" }
+    headers: { "Authorization": "Bearer test-secret-token-at-least-32-characters" }
   });
   if (keysRes.status === 200) {
     const keysStats = await keysRes.json() as any;
@@ -343,7 +351,7 @@ try {
 
   // Setup WebSocket connection
   const session = `session-${Math.random().toString(36).substring(7)}`;
-  const wsUrl = `ws://localhost:${actualPort}/v1/ws/${session}?token=test-secret-token`;
+  const wsUrl = `ws://localhost:${actualPort}/v1/ws/${session}?token=test-secret-token-at-least-32-characters`;
 
   let wsConnected = false;
   let receivedChunks: string[] = [];
@@ -376,7 +384,7 @@ try {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": "Bearer test-secret-token"
+      "Authorization": "Bearer test-secret-token-at-least-32-characters"
     },
     body: JSON.stringify({
       prompt: "Who are you?",

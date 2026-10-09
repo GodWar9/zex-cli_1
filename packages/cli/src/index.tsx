@@ -24,7 +24,8 @@ Usage:
 Environment:
   OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY
   ZEX_AUTH_REQUIRED   Set to "true" to fail closed when no token is configured
-  ZEX_AUTH_TOKEN      Bearer token for API auth
+  ZEX_AUTH_TOKEN      Required server bearer token (at least 32 characters)
+  ZEX_HOST            API bind address (default: 127.0.0.1; public binds require a token)
   PORT                API server port (default: 3000)
   DAILY_BUDGET_USD    Daily spending cap (default: 10.0)
 `);

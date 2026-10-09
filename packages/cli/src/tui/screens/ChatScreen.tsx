@@ -6,30 +6,30 @@ import Banner from '../components/Banner.tsx';
 import MessageList, { type Message } from '../components/MessageList.tsx';
 import InputBox from '../components/InputBox.tsx';
 import StatusBar from '../components/StatusBar.tsx';
-import { runTurn, type ConversationMessage } from '@zex/core/agent/runner.ts';
-import { getActiveModelLabel, loadConfig } from '@zex/core/config/index.ts';
+import { runTurn, type ConversationMessage } from '@sahil/zex-core/agent/runner.ts';
+import { getActiveModelLabel, loadConfig } from '@sahil/zex-core/config/index.ts';
 import { parseSlashCommand, buildHelpMessage } from '../slashCommands.ts';
-import { undoStack } from '@zex/core/session/undoStack.ts';
-import { saveSession, loadLastSession, generateSessionId } from '@zex/core/session/store.ts';
-import { getSecuritySummary, logSecurityEvent, securityLog } from '@zex/core/security/eventLog.ts';
-import { auditProject } from '@zex/core/security/projectAudit.ts';
-import { buildContextReport } from '@zex/core/context/status.ts';
-import { metrics } from '@zex/core/session/metrics.ts';
-import { remember, recall, clusterMemories } from '@zex/core/session/memory.ts';
-import { budgetTracker } from '@zex/core/session/budget.ts';
-import { exportSessionMarkdown } from '@zex/core/session/export.ts';
-import { dualCache } from '@zex/core/cache/index.ts';
-import { startFileWatcher } from '@zex/core/utils/fileWatcher.ts';
-import { gc } from '@zex/core/agent/gcState.ts';
-import { parseIntent } from '@zex/core/agent/intent.ts';
-import { executeDAG } from '@zex/core/agent/orchestrator.ts';
-import { collaborativeDebug } from '@zex/core/agent/collabDebug.ts';
-import type { RunnerCallbacks } from '@zex/core/agent/runner.ts';
-import { auditDependencies, formatDepAudit } from '@zex/core/security/depAudit.ts';
-import { ensureAuthenticated, authenticate, formatAuthStatus } from '@zex/core/enterprise/auth.ts';
-import { formatOrgSummary } from '@zex/core/enterprise/orgConfig.ts';
-import { formatAuditSummary, setAuditSession } from '@zex/core/enterprise/auditLog.ts';
-import { exportFineTuneDataset } from '@zex/core/enterprise/fineTuneExport.ts';
+import { undoStack } from '@sahil/zex-core/session/undoStack.ts';
+import { saveSession, loadLastSession, generateSessionId } from '@sahil/zex-core/session/store.ts';
+import { getSecuritySummary, logSecurityEvent, securityLog } from '@sahil/zex-core/security/eventLog.ts';
+import { auditProject } from '@sahil/zex-core/security/projectAudit.ts';
+import { buildContextReport } from '@sahil/zex-core/context/status.ts';
+import { metrics } from '@sahil/zex-core/session/metrics.ts';
+import { remember, recall, clusterMemories } from '@sahil/zex-core/session/memory.ts';
+import { budgetTracker } from '@sahil/zex-core/session/budget.ts';
+import { exportSessionMarkdown } from '@sahil/zex-core/session/export.ts';
+import { dualCache } from '@sahil/zex-core/cache/index.ts';
+import { startFileWatcher } from '@sahil/zex-core/utils/fileWatcher.ts';
+import { gc } from '@sahil/zex-core/agent/gcState.ts';
+import { parseIntent } from '@sahil/zex-core/agent/intent.ts';
+import { executeDAG } from '@sahil/zex-core/agent/orchestrator.ts';
+import { collaborativeDebug } from '@sahil/zex-core/agent/collabDebug.ts';
+import type { RunnerCallbacks } from '@sahil/zex-core/agent/runner.ts';
+import { auditDependencies, formatDepAudit } from '@sahil/zex-core/security/depAudit.ts';
+import { ensureAuthenticated, authenticate, formatAuthStatus } from '@sahil/zex-core/enterprise/auth.ts';
+import { formatOrgSummary } from '@sahil/zex-core/enterprise/orgConfig.ts';
+import { formatAuditSummary, setAuditSession } from '@sahil/zex-core/enterprise/auditLog.ts';
+import { exportFineTuneDataset } from '@sahil/zex-core/enterprise/fineTuneExport.ts';
 
 let msgCounter = 0;
 const nextId = () => String(++msgCounter);
@@ -158,7 +158,7 @@ export default function ChatScreen() {
 
       case 'keys': {
         // Import dynamically to read live pool state
-        import('@zex/core/agent/keyPool.ts').then(({ KeyPool }) => {
+        import('@sahil/zex-core/agent/keyPool.ts').then(({ KeyPool }) => {
           try {
             const pool = KeyPool.fromEnv();
             const status = pool.status();
@@ -541,7 +541,7 @@ export default function ChatScreen() {
               { id: noticeId, role: 'system', content: `🔑 ${message}` },
             ]);
             // Update key pool summary in status bar
-            import('@zex/core/agent/keyPool.ts').then(({ KeyPool }) => {
+            import('@sahil/zex-core/agent/keyPool.ts').then(({ KeyPool }) => {
               try {
                 const pool = KeyPool.fromEnv();
                 setKeyPoolSummary(pool.summaryLine());

@@ -265,8 +265,8 @@ try {
     fail('After exhausting KEY_A, should return KEY_B', `Got: ${pool.getCurrentKey()}`);
   }
 
-  const masked = KeyPool.maskKey('AIzaSyA69SDM8mhFwjv9MPM2rtWRRxr3Oh31EBc');
-  const expectedStart = 'AIzaSyA6';
+  const masked = KeyPool.maskKey('synthetic-test-key-alpha-1234567890');
+  const expectedStart = 'syntheti';
   const expectedEnd   = masked.slice(-4);
   if (masked.startsWith(expectedStart) && masked.includes('...')) {
     ok(`maskKey shows first 8 + last 4 chars: "${masked}"`);

@@ -1,25 +1,27 @@
-# @zex/core
+# @sahil/zex-core
 
-Core orchestration library for [zex](https://www.npmjs.com/package/zex) — agent
+> Release status (2026-10-08): scoped packages are prepared and locally tested, but not yet published. Registry installation commands below apply after publication.
+
+Core orchestration library for [zex](https://github.com/GodWar9/zex-cli_1) — agent
 orchestration, LLM provider adapters, multi-key pooling, budget management, and
 security scanning. Framework-agnostic; the `zex` CLI is one consumer of it.
 
-> `import { ... } from "@zex/core"` resolves to compiled JS (`dist/`), built
-> via `tsc`. Requires Node.js **>= 22.6.0**. Deep subpath imports (e.g.
-> `@zex/core/agent/runner.ts`) still resolve to raw TypeScript source — those
+> `import { ... } from "@sahil/zex-core"` resolves to compiled JS (`dist/`), built
+> via `tsc`. Requires Node.js **>= 24.12.0**. Deep subpath imports (e.g.
+> `@sahil/zex-core/agent/runner.ts`) still resolve to raw TypeScript source — those
 > are for the `zex` CLI's own bundler-time use, not meant to be `require`d /
 > `import`ed directly by Node at runtime. See "Stability" below.
 
 ## Install
 
 ```bash
-npm install @zex/core
+npm install @sahil/zex-core
 ```
 
 ## Quickstart
 
 ```ts
-import { ZexOrchestrator } from "@zex/core";
+import { ZexOrchestrator } from "@sahil/zex-core";
 
 const orchestrator = new ZexOrchestrator({
   keys: [
@@ -42,7 +44,7 @@ The key pool and provider factory are provider-agnostic — you're not limited
 to the three built-in providers:
 
 ```ts
-import { registerEnterpriseProvider, KeyPool } from "@zex/core";
+import { registerEnterpriseProvider, KeyPool } from "@sahil/zex-core";
 
 class MySelfHostedProvider {
   constructor(private apiKey: string) {}
@@ -61,7 +63,7 @@ KeyPool.registerQuotaDefault("my-self-hosted-llm", {
 
 ## API reference
 
-The only supported entrypoint is the package root (`import ... from "@zex/core"`),
+The only supported entrypoint is the package root (`import ... from "@sahil/zex-core"`),
 documented inline in [`src/index.ts`](./src/index.ts):
 
 - `ZexOrchestrator` (alias `ZexLLMOrchestrator`) — `new ZexOrchestrator(config)`, `.queueTask()`, `.getHealth()`, `.getTaskResult()`, `.destroy()`
@@ -71,7 +73,7 @@ documented inline in [`src/index.ts`](./src/index.ts):
 - `loadConfig`, `reloadConfig`, `detectProvider`
 - `scanCode` — pattern-based security scanner (XSS/SQLi/secrets)
 
-Everything under a deep subpath (e.g. `@zex/core/agent/runner.ts`) is exported
+Everything under a deep subpath (e.g. `@sahil/zex-core/agent/runner.ts`) is exported
 for the `zex` CLI's own internal use and is **not** part of the stable public
 API — it may change or move without a semver-major bump.
 
