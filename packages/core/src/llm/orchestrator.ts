@@ -4,6 +4,7 @@ import { CostCalculator } from "./costCalculator.ts";
 import { AdvancedScheduler, type ScheduledTask } from "./advancedScheduler.ts";
 import { PredictiveScheduler } from "./predictiveScheduler.ts";
 import { LLMProviderFactory } from "./providers.ts";
+import { routeModel } from "./routing.ts";
 
 export interface OrchestratorConfig {
   keys: Array<{
@@ -18,6 +19,7 @@ export interface OrchestratorConfig {
 }
 
 export interface TaskWithMetrics extends ScheduledTask {
+  provider?: string;
   onChunk?: (chunk: string) => void;
   response?: string;
   error?: string;
@@ -545,13 +547,14 @@ export class ZexLLMOrchestrator {
     prompt: string,
     options?: {
       model?: string;
+      provider?: string;
       priority?: number;
       deadline?: number;
       maxRetries?: number;
       onChunk?: (chunk: string) => void;
     }
   ): Promise<string> {
-    const model = options?.model || "gpt-4o-mini";
+    const { model, provider } = routeModel(this.config.keys, options?.model, options?.provider);
     const estimate = this.tokenizer.estimateTotalTokens(prompt, model);
 
     const cost = this.costCalc.estimateCost(
@@ -575,6 +578,7 @@ export class ZexLLMOrchestrator {
       id: taskId,
       prompt,
       model,
+      provider,
       priority: options?.priority ?? 5,
       estimatedTokens: estimate.totalEstimatedTokens,
       deadline: options?.deadline,
@@ -629,7 +633,7 @@ export class ZexLLMOrchestrator {
       }
 
       try {
-        const key = this.keyPool.selectBestKey(task.estimatedTokens);
+        const key = this.keyPool.selectBestKey(task.estimatedTokens, { provider: this.taskQueue.get(task.id)?.provider });
 
         task.status = "assigned";
         task.assignedKeyId = key.id;

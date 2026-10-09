@@ -54,21 +54,12 @@ const DEFAULT_MAX_TOKENS = 8192;
 // ─── Per-provider singleton pool ──────────────────────────────────────────────
 // One pool per process — keys are shared across turns.
 let _keyPool: KeyPool | null = null;
-
-function getKeyPool(config: ProviderConfig): KeyPool {
-  if (!_keyPool) {
-    // Support apiKeys array from config (set via ~/.zex/config.json)
-    const configKeys = (config as any).apiKeys as string[] | undefined;
-    if (config.apiKey && !configKeys) {
-      // Single key from config: wrap it but still pick up env pool if set
-      try {
-        _keyPool = KeyPool.fromEnv(undefined);
-      } catch {
-        _keyPool = new KeyPool([config.apiKey]);
-      }
-    } else {
-      _keyPool = KeyPool.fromEnv(configKeys);
-    }
+let _poolConfig = '';
+export function getKeyPool(config: ProviderConfig): KeyPool {
+  const signature = JSON.stringify([config.apiKey, config.apiKeys, process.env.GEMINI_API_KEYS, process.env.GEMINI_API_KEY, process.env.GOOGLE_API_KEY]);
+  if (!_keyPool || signature !== _poolConfig) {
+    _keyPool = KeyPool.fromEnv(config.apiKey ? [config.apiKey] : config.apiKeys);
+    _poolConfig = signature;
   }
   return _keyPool;
 }

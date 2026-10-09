@@ -8,6 +8,17 @@ if (args.includes('--serve') || args.includes('--server')) {
   const { shutdown } = await import('./api/server.ts');
   process.on('SIGINT', () => { shutdown(); process.exit(0); });
   process.on('SIGTERM', () => { shutdown(); process.exit(0); });
+} else if (args.includes('--doctor')) {
+  const { loadConfig } = await import('@sahil/zex-core/config/index.ts');
+  try {
+    const { provider } = loadConfig();
+    const ready = provider.provider === 'ollama' || Boolean(provider.apiKey || provider.apiKeys?.length);
+    console.log(JSON.stringify({ provider: provider.provider, model: provider.model, endpoint: provider.baseUrl ? new URL(provider.baseUrl).origin : 'provider default', credentials: provider.provider === 'ollama' ? 'not required' : ready ? 'configured' : 'missing', liveConnectionTested: false }, null, 2));
+    if (!ready) process.exitCode = 1;
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : 'Invalid configuration');
+    process.exitCode = 1;
+  }
 } else if (args.includes('--version') || args.includes('-v')) {
   // Print version from package.json
   const pkg = await import('../package.json', { with: { type: 'json' } });
@@ -18,12 +29,14 @@ if (args.includes('--serve') || args.includes('--server')) {
 Usage:
   zex                 Launch the interactive TUI
   zex --serve         Run headless API server (port: PORT or 3000)
+  zex --doctor        Check terminal provider setup without exposing keys or calling APIs
   zex --version, -v   Print version
   zex --help, -h      Show this help
 
 Environment:
-  OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY
-  ZEX_AUTH_REQUIRED   Set to "true" to fail closed when no token is configured
+  OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY
+  ZEX_PROVIDER, ZEX_MODEL, ZEX_API_KEY, ZEX_BASE_URL   Terminal overrides
+  ZEX_CONFIG_FILE     Optional terminal JSON configuration path
   ZEX_AUTH_TOKEN      Required server bearer token (at least 32 characters)
   ZEX_HOST            API bind address (default: 127.0.0.1; public binds require a token)
   PORT                API server port (default: 3000)

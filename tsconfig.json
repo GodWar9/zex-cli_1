@@ -32,6 +32,8 @@
     "test-integration.ts",
     "benchmarks/run-benchmark.ts",
     "test-providers.ts",
-    "scripts/demo.ts"
+    "scripts/demo.ts",
+    "test-config.ts",
+    "test-terminal-providers.ts"
   ]
 }

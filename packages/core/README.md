@@ -85,3 +85,5 @@ This is `0.x` — expect breaking changes. Most likely to change:
 - `KeyPool`'s exact quota-object shape
 - The compiled-output build pipeline itself (currently plain `tsc`; may adopt
   bundling/minification in a future minor version)
+
+See the [user guide](https://github.com/GodWar9/zex-cli_1/blob/main/packages/cli/USER_GUIDE.md) for provider setup and terminal/server differences.

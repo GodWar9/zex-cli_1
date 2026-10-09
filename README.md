@@ -67,3 +67,5 @@ Default listener: `127.0.0.1:3000`. A token of at least 32 characters is require
 After publication, `npm install -g @sahil/zex` installs the `zex` command; `npm install @sahil/zex-core` installs the library. Both require Node 24.12+. See [CLI usage](packages/cli/README.md), [library API](packages/core/README.md), and [changelog](CHANGELOG.md).
 
 Verified code and interview walkthrough: [release evidence](RELEASE_EVIDENCE.md).
+
+Read the [user guide](packages/cli/USER_GUIDE.md) for API-key setup, provider capabilities, configuration precedence, server usage and troubleshooting.

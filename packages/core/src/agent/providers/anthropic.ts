@@ -33,7 +33,7 @@ export class AnthropicProvider implements LLMProvider {
       return;
     }
 
-    const client = new Anthropic({ apiKey });
+    const client = new Anthropic({ apiKey, baseURL: 'https://api.anthropic.com' });
 
     // Separate system messages from conversation messages
     const systemMsgs = messages.filter((m) => m.role === 'system');

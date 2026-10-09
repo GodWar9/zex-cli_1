@@ -21,6 +21,7 @@ export class KeyPool {
   private currentIndex: number = 0;
 
   constructor(keys: string[]) {
+    keys = [...new Set(keys.map(key => key.trim()).filter(Boolean))];
     if (keys.length === 0) {
       throw new Error('KeyPool requires at least one API key.');
     }

@@ -33,7 +33,7 @@ export class OpenAIProvider implements IEnterpriseProvider {
   private client: OpenAI;
 
   constructor(apiKey: string) {
-    this.client = new OpenAI({ apiKey });
+    this.client = new OpenAI({ apiKey, baseURL: 'https://api.openai.com/v1' });
   }
 
   async chat(
@@ -100,7 +100,7 @@ export class AnthropicProvider implements IEnterpriseProvider {
   private client: Anthropic;
 
   constructor(apiKey: string) {
-    this.client = new Anthropic({ apiKey });
+    this.client = new Anthropic({ apiKey, baseURL: 'https://api.anthropic.com' });
   }
 
   async chat(

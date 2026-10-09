@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### User API-key setup
+
+- Add an included user guide covering Windows/macOS/Linux setup, provider capabilities, configuration precedence, compatible endpoints, server auth and troubleshooting.
+- Add a local --doctor configuration check that does not print keys or call providers.
+- Validate terminal configuration and fix provider-specific defaults, Gemini pool precedence and saved-credential isolation when switching providers.
+- Keep headless model routing and retries within the correct provider; reject mismatched models and missing keys before queueing.
+- Add configuration, terminal SDK transport and packaged-diagnostic regression checks.
+
+
 ### Fixed
 
 - Require a 32-character API token on every bind; validate request fields, startup settings and body limits.

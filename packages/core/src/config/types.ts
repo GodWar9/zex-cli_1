@@ -27,7 +27,7 @@ export interface UserConfig {
   /** Single API key (backward compat) */
   apiKey?: string;
   /** Multiple API keys for failover rotation (Gemini free tier support).
-   *  If set, takes priority over apiKey. Also reads from GEMINI_API_KEYS env var. */
+   *  Explicit apiKey takes priority. Also reads from GEMINI_API_KEYS env var. */
   apiKeys?: string[];
   baseUrl?: string;
   maxTokens?: number;

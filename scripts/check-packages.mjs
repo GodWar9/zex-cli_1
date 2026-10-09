@@ -26,6 +26,7 @@ for (const name of ['@sahil/zex-core', '@sahil/zex']) {
   const [pack] = JSON.parse(run([npm, 'pack', '--ignore-scripts', '--json', '--workspace', name, '--pack-destination', workspace]));
   assert.equal(pack.name, name);
   assert.ok(pack.files.some((file) => file.path === 'LICENSE'));
+  if (name === '@sahil/zex') assert.ok(pack.files.some(file => file.path === 'USER_GUIDE.md'));
   assert.ok(pack.files.some((file) => file.path === (name.endsWith('core') ? 'dist/index.js' : 'dist/cli.js')));
   assert.ok(!pack.files.some((file) => /(^|\/)(\.env(?:\.|$)|node_modules|tests?)(\/|$)/.test(file.path)));
   tarballs.push(join(workspace, pack.filename));
@@ -38,6 +39,23 @@ const cli = join(consumer, 'node_modules', '@sahil', 'zex', 'dist', 'cli.js');
 assert.match(run([cli, '--version'], consumer), /zex v\d+\.\d+\.\d+/);
 assert.match(run([cli, '--help'], consumer), /Usage:/);
 
+const doctorConfig = join(consumer, 'doctor-config.json');
+const doctorEnv = { ...process.env, ZEX_CONFIG_FILE: doctorConfig };
+for (const key of ['ZEX_PROVIDER', 'ZEX_MODEL', 'ZEX_API_KEY', 'ZEX_BASE_URL', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GEMINI_API_KEYS', 'OPENROUTER_API_KEY']) delete doctorEnv[key];
+const diagnosticSecret = 'synthetic-doctor-key-must-not-be-printed';
+for (const [config, code] of [[{ provider: 'openai', apiKey: diagnosticSecret }, 0], [{ provider: 'openai' }, 1], [{ provider: 'ollama' }, 0]]) {
+  writeFileSync(doctorConfig, JSON.stringify(config));
+  const doctor = spawnSync(process.execPath, [cli, '--doctor'], { cwd: consumer, env: doctorEnv, encoding: 'utf8', timeout: 10_000 });
+  assert.equal(doctor.status, code, doctor.stderr);
+  assert.ok(!(doctor.stdout + doctor.stderr).includes(diagnosticSecret));
+  assert.equal(JSON.parse(doctor.stdout).liveConnectionTested, false);
+}
+writeFileSync(doctorConfig, '{invalid JSON ' + diagnosticSecret);
+const malformed = spawnSync(process.execPath, [cli, '--doctor'], { cwd: consumer, env: doctorEnv, encoding: 'utf8', timeout: 10_000 });
+assert.equal(malformed.status, 1);
+assert.match(malformed.stderr, /JSON syntax/);
+assert.ok(!malformed.stderr.includes(diagnosticSecret));
+
 const reservation = createServer();
 reservation.listen(0, '127.0.0.1');
 await once(reservation, 'listening');
@@ -45,7 +63,7 @@ const port = reservation.address().port;
 await new Promise((resolve) => reservation.close(resolve));
 const token = randomBytes(32).toString('hex');
 const env = { ...process.env, PORT: String(port), ZEX_HOST: '127.0.0.1', ZEX_AUTH_TOKEN: token, ZEX_AUTH_REQUIRED: 'true' };
-for (const key of ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GEMINI_API_KEY', 'GEMINI_API_KEYS']) delete env[key];
+for (const key of ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GEMINI_API_KEYS']) delete env[key];
 const child = spawn(process.execPath, [cli, '--serve'], { cwd: consumer, env, stdio: 'pipe' });
 let logs = '';
 child.stdout.on('data', (chunk) => { logs = (logs + chunk).slice(-8000); });
@@ -63,6 +81,7 @@ try {
   }
   assert.ok(ready, `Packaged server failed to start: ${logs}`);
   assert.equal((await fetch(`${origin}/v1/health`)).status, 401);
+  assert.equal((await fetch(`${origin}/v1/chat`, { method: 'POST', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ prompt: 'hello', provider: 'gemini' }) })).status, 400);
   assert.equal((await fetch(`${origin}/v1/chat`, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: '{}' })).status, 400);
   for (const body of ['null', '[]', '{', JSON.stringify({ prompt: ' ' }), JSON.stringify({ prompt: 'hi', priority: -1 }), JSON.stringify({ prompt: 'hi', model: {} })]) {
     assert.equal((await fetch(`${origin}/v1/chat`, { method: 'POST', headers: { authorization: `Bearer ${token}` }, body })).status, 400);

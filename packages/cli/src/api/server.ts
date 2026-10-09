@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import type { Socket } from "node:net";
 import { WebSocketServer, type WebSocket } from "ws";
 import { ZexLLMOrchestrator } from "@sahil/zex-core/llm/orchestrator.ts";
+import { ProviderConfigurationError } from "@sahil/zex-core/llm/routing.ts";
 
 // Runtime-agnostic (node:http + ws) — works under plain Node and under Bun.
 const authToken = process.env.ZEX_AUTH_TOKEN;
@@ -41,8 +42,8 @@ function gatherKeys(): Array<{ provider: "openai" | "anthropic" | "gemini"; apiK
   if (process.env.ANTHROPIC_API_KEY) {
     keys.push({ provider: "anthropic", apiKey: process.env.ANTHROPIC_API_KEY, priority: 8 });
   }
-  if (process.env.GEMINI_API_KEY) {
-    keys.push({ provider: "gemini", apiKey: process.env.GEMINI_API_KEY, priority: 6 });
+  if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
+    keys.push({ provider: "gemini", apiKey: (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)!, priority: 6 });
   }
   if (process.env.GEMINI_API_KEYS) {
     for (const k of process.env.GEMINI_API_KEYS.split(",").map(k => k.trim()).filter(Boolean)) {
@@ -50,7 +51,7 @@ function gatherKeys(): Array<{ provider: "openai" | "anthropic" | "gemini"; apiK
     }
   }
 
-  return keys;
+  return keys.map(key => ({ ...key, apiKey: key.apiKey.trim() })).filter((key, index, all) => key.apiKey && all.findIndex(other => other.provider === key.provider && other.apiKey === key.apiKey) === index);
 }
 
 function createOrchestrator() {
@@ -135,17 +136,20 @@ async function handleChat(req: IncomingMessage, res: ServerResponse): Promise<vo
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     sendJson(res, 400, { error: 'Expected a JSON object' }); return;
   }
-  const { prompt, model, priority, deadline, sessionId } = body as Record<string, unknown>;
+  const { prompt, model, provider, priority, deadline, sessionId } = body as Record<string, unknown>;
   if (typeof prompt !== 'string' || !prompt.trim() || prompt.length > 32000 ||
       (model !== undefined && (typeof model !== 'string' || !model || model.length > 128)) ||
+      (provider !== undefined && (typeof provider !== 'string' || !['openai', 'anthropic', 'gemini'].includes(provider))) ||
       (priority !== undefined && (typeof priority !== 'number' || !Number.isInteger(priority) || priority < 0 || priority > 10)) ||
       (deadline !== undefined && (typeof deadline !== 'number' || !Number.isFinite(deadline) || deadline < 0)) ||
       (sessionId !== undefined && (typeof sessionId !== 'string' || sessionId.length > 128))) {
     sendJson(res, 400, { error: 'Invalid chat parameters' }); return;
   }
 
-  const taskId = await orchestrator.queueTask(prompt, {
+  let taskId: string;
+  try { taskId = await orchestrator.queueTask(prompt, {
     model,
+    provider,
     priority,
     deadline,
     onChunk: (chunk: string) => {
@@ -156,7 +160,12 @@ async function handleChat(req: IncomingMessage, res: ServerResponse): Promise<vo
         }
       }
     }
-  });
+  }); } catch (error) {
+    if (error instanceof ProviderConfigurationError) {
+      sendJson(res, 400, { error: error.message }); return;
+    }
+    throw error;
+  }
 
   const task = orchestrator.taskQueue.get(taskId);
   if (task) {

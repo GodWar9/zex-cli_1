@@ -50,6 +50,8 @@ export interface ProviderConfig {
   provider: ProviderId;
   model: string;
   apiKey?: string;
+  /** Gemini key pool; an explicit single apiKey takes precedence. */
+  apiKeys?: string[];
   /** Base URL override — used for openrouter, ollama, custom OpenAI-compatible endpoints */
   baseUrl?: string;
   /** Max tokens to generate */
