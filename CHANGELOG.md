@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Terminal tool support
+
+- Add streamed tool definitions, argument assembly and tool-result history for OpenAI, Anthropic, OpenRouter, Ollama and compatible terminal endpoints.
+- Reject incomplete, malformed, duplicate-ID and oversized tool batches before execution; capture final streaming token usage.
+- Add a text-only tools=false option and keep intent clarification tool-free.
+- Fix workspace checks accepting similarly named sibling directories.
+- Add 33 protocol checks and an isolated runner suite with eight real execution/denial cases and a sibling-boundary regression.
+
+
 ### User API-key setup
 
 - Add an included user guide covering Windows/macOS/Linux setup, provider capabilities, configuration precedence, compatible endpoints, server auth and troubleshooting.

@@ -34,6 +34,9 @@
     "test-providers.ts",
     "scripts/demo.ts",
     "test-config.ts",
-    "test-terminal-providers.ts"
+    "test-terminal-providers.ts",
+    "test-tool-streams.ts",
+    "tests/**/*.ts",
+    "test-tool-runner.ts"
   ]
 }

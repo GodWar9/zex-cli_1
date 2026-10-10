@@ -73,6 +73,7 @@ export async function clarifyIntent(
     // Run the LLM call with a hard token cap of 300 — we only need a JSON snippet
     const clarifierConfig = {
       ...config.provider,
+      tools: false,
       maxTokens: 300,
       temperature: 0,
       systemPrompt: CLARIFIER_SYSTEM_PROMPT,

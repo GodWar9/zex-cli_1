@@ -1,5 +1,5 @@
 import { realpath, open } from 'node:fs/promises';
-import { resolve, join, basename } from 'node:path';
+import { resolve, join, basename, relative, isAbsolute, sep } from 'node:path';
 
 // 10 MB limits
 export const MAX_READ_SIZE = 10 * 1024 * 1024;
@@ -42,7 +42,8 @@ export async function validateWorkspaceBoundary(targetPath: string): Promise<str
 
   const realCwd = await realpath(cwd);
 
-  if (!realTarget.startsWith(realCwd)) {
+  const within = relative(realCwd, realTarget);
+  if (isAbsolute(within) || within === '..' || within.startsWith('..' + sep)) {
     throw new Error(`Path ${targetPath} escapes the workspace boundary (${realCwd}).`);
   }
 

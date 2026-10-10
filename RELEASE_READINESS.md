@@ -1,4 +1,4 @@
-# Zex release readiness — 2026-10-09
+# Zex release readiness — 2026-10-10
 
 Intended packages: `@sahil/zex-core@0.1.0`, `@sahil/zex@0.1.0`. Command: `zex`. Nothing has been published.
 
@@ -11,7 +11,7 @@ npm run ci
 npm run build:ci
 ```
 
-The CI command runs types, 34 offline checks, six SDK transport regressions, 11 configuration/routing checks, six terminal transport checks, 24 enterprise checks, and isolated installation of both tarballs. Package checks cover compiled exports, CLI help/version, authenticated health, invalid/oversized requests and startup validation. Reviewed tarballs are written to `.release/`.
+The CI command runs types, 34 offline checks, six SDK transport regressions, 11 configuration/routing checks, six terminal transport checks, 24 enterprise checks, 33 tool-stream protocol checks plus an isolated runner suite with eight execution/denial cases, and isolated installation of both tarballs. Package checks cover compiled exports, CLI help/version, authenticated health, invalid/oversized requests and startup validation. Reviewed tarballs are written to `.release/`.
 
 Supported minimum: Node.js 24.12. CI targets the minimum and current Node 24 on Windows, Linux and macOS. Local success does not prove remote CI success; inspect the exact commit.
 

@@ -69,3 +69,5 @@ After publication, `npm install -g @sahil/zex` installs the `zex` command; `npm 
 Verified code and interview walkthrough: [release evidence](RELEASE_EVIDENCE.md).
 
 Read the [user guide](packages/cli/USER_GUIDE.md) for API-key setup, provider capabilities, configuration precedence, server usage and troubleshooting.
+
+Terminal tool calls are implemented for Gemini, OpenAI, Anthropic and the OpenAI-compatible adapters (OpenRouter, Ollama and custom endpoints). Select a model with function-calling support; use `"tools": false` for text-only models. See the user guide for execution boundaries and verification limits.

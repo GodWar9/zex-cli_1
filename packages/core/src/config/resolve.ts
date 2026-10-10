@@ -25,6 +25,7 @@ export function resolveConfig(input: unknown = {}, env: NodeJS.ProcessEnv = proc
   const selected = text(env.ZEX_PROVIDER, 'ZEX_PROVIDER') ?? text(user.provider, 'provider') ?? detected;
   if (!Object.hasOwn(providerDefaults, selected)) throw new Error('Unsupported provider. Use openai, anthropic, gemini, openrouter or ollama; compatible endpoints use openai with baseUrl.');
   const provider = selected as ProviderId;
+  if (user.tools !== undefined && typeof user.tools !== 'boolean') throw new Error('tools must be true or false');
   const savedProviderMatches = user.provider === undefined || user.provider === provider;
   const model = text(env.ZEX_MODEL, 'ZEX_MODEL') ?? (savedProviderMatches ? text(user.model, 'model') : undefined) ?? providerDefaults[provider].model;
   const baseUrl = text(env.ZEX_BASE_URL, 'ZEX_BASE_URL') ?? (savedProviderMatches ? text(user.baseUrl, 'baseUrl') : undefined);
@@ -54,5 +55,6 @@ export function resolveConfig(input: unknown = {}, env: NodeJS.ProcessEnv = proc
   if (!Number.isInteger(maxTokens) || maxTokens < 1) throw new Error('maxTokens must be a positive integer');
   if (typeof temperature !== 'number' || !Number.isFinite(temperature) || temperature < 0 || temperature > 2) throw new Error('temperature must be between 0 and 2');
   const config: ProviderConfig = { provider, model, apiKey, apiKeys, baseUrl, maxTokens, temperature, systemPrompt: text(user.systemPrompt, 'systemPrompt') ?? DEFAULT_SYSTEM_PROMPT };
+  config.tools = user.tools ?? true;
   return { provider: config, multiAgent: user.multiAgent === true };
 }

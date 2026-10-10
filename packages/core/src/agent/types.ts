@@ -47,6 +47,8 @@ export type ProviderId =
 // ─── Provider config ─────────────────────────────────────────────────────────
 
 export interface ProviderConfig {
+  /** Disable tool exposure for text-only requests or models. */
+  tools?: boolean;
   provider: ProviderId;
   model: string;
   apiKey?: string;

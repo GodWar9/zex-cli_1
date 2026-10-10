@@ -32,13 +32,13 @@ For subsequent commands, replace `zex` with `node packages/cli/dist/cli.js` when
 | Provider ID | Credential variable | Terminal responses | Terminal file/shell tools | Headless chat |
 |---|---|---|---|---|
 | gemini | GEMINI_API_KEY or GOOGLE_API_KEY | Implemented | Implemented | Implemented |
-| openai | OPENAI_API_KEY | Implemented | Not wired yet | Implemented |
-| anthropic | ANTHROPIC_API_KEY | Implemented | Not wired yet | Implemented |
-| openrouter | OPENROUTER_API_KEY | Implemented | Not wired yet | Not built in |
-| ollama | None for local Ollama | Implemented | Not wired yet | Not built in |
-| Compatible endpoint via openai | ZEX_API_KEY + ZEX_BASE_URL | Depends on endpoint | Not wired yet | Not built in |
+| openai | OPENAI_API_KEY | Implemented | Implemented* | Implemented |
+| anthropic | ANTHROPIC_API_KEY | Implemented | Implemented* | Implemented |
+| openrouter | OPENROUTER_API_KEY | Implemented | Implemented* | Not built in |
+| ollama | None for local Ollama | Implemented | Implemented* | Not built in |
+| Compatible endpoint via openai | ZEX_API_KEY + ZEX_BASE_URL | Depends on endpoint | Implemented* | Not built in |
 
-Only the Gemini terminal adapter currently exposes Zex's file/shell tools. Headless chat queues model prompts, not terminal tool execution. “Implemented” means the adapter exists, not that every model has been tested live.
+Gemini, OpenAI and Anthropic expose Zex's file/shell tools. OpenRouter, Ollama and custom OpenAI-compatible endpoints use the same tool protocol; the selected model and endpoint must support function calling. Headless chat queues model prompts, not terminal tool execution. Implemented means the adapter and deterministic tests exist, not that every model has been tested live. The asterisk marks newly added tool support tested through mocked SDK transports and real local tools.
 
 Get credentials from [OpenAI](https://platform.openai.com/api-keys), [Anthropic](https://platform.claude.com/settings/keys), [Google AI Studio](https://aistudio.google.com/apikey), or [OpenRouter](https://openrouter.ai/settings/keys). Your account must have access and quota for the chosen model; Zex does not include API credits.
 
@@ -194,7 +194,7 @@ This is a single-operator server, without user accounts, per-user key storage or
 | 429 / quota exhausted | Wait or reduce request rate; check the provider dashboard |
 | Invalid config | Check JSON syntax/types, supported provider IDs and ZEX_CONFIG_FILE |
 | Ollama connection refused | Start Ollama and install the requested model |
-| Responses work but no file edits | Only Gemini currently has terminal tools wired |
+| Responses work but no file edits | Choose a tool-capable model/endpoint, check tools is not false, and check tool policy/approval results |
 | npm package not found | Use source installation until publication |
 
 Do not put keys in prompts or bug reports. Review logs/screenshots before sharing: provider errors or tool output may contain sensitive content. The assistant may send project context to the selected provider and execute local tools; use trusted projects and review changes.
@@ -208,3 +208,15 @@ Optional live checks: set ZEX_LIVE_INTEGRATION=true and run npm run test:integra
 Report Zex/Node versions, OS, provider/model, terminal versus server mode, and redacted errors. Never attach keys, server tokens, .env or secret-bearing config files.
 
 Built-in Anthropic and headless OpenAI adapters pin their official endpoints. SDK-specific base-URL environment overrides are not supported; use the documented terminal OpenAI-compatible configuration for another endpoint.
+
+## Tool execution and text-only models
+
+Terminal adapters expose the registered read, write, patch, search, directory, project-status and shell tools. Tool calls pass through the existing runner policy and approval callback before execution. Scanners and workspace checks still apply; shell commands are not a sandbox. Plan mode remains advisory.
+
+Set `"tools": false` in your terminal JSON config for a model or endpoint that does not support tools, or when you only want responses. This omits tool schemas and rejects unexpected tool calls; the internal intent clarifier always uses text-only mode. Restart Zex after changing config. Doctor reports toolsEnabled.
+
+OpenAI-compatible and Anthropic adapters buffer a complete tool batch before handing it to the runner. Malformed JSON, duplicate call IDs, non-object arguments, truncated output or missing completion markers produce an error without executing that batch. A batch is limited to 64 indexed calls and 1 MiB of streamed call data. Model-side parallel calls are executed sequentially by the runner.
+
+`npm run test:tools` verifies streamed fragments, tool/result IDs, final token usage and failures. It also runs real file write/read and harmless shell operations in temporary workspaces, plus denied-execution checks, for OpenAI, Anthropic, OpenRouter and Ollama. Those SDK transports are mocked; live model/tool reliability still requires a credentialed walkthrough.
+
+Protocol references: [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling) and [Anthropic streaming](https://platform.claude.com/docs/en/build-with-claude/streaming).

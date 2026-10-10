@@ -21,6 +21,7 @@ export interface CacheConfig {
 }
 
 export interface UserConfig {
+  tools?: boolean;
   /** Which provider + model to use */
   provider?: ProviderId;
   model?: string;

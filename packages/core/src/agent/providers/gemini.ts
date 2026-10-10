@@ -97,7 +97,7 @@ export class GeminiProvider implements LLMProvider {
     const geminiModel = genAI.getGenerativeModel({
       model,
       systemInstruction: systemPrompt,
-      tools: convertToolsToGemini()
+      tools: config.tools === false ? undefined : convertToolsToGemini()
     });
 
     const chatMessages = messages.filter((m) => m.role !== 'system');
@@ -180,6 +180,7 @@ export class GeminiProvider implements LLMProvider {
         const candidateParts = chunk.candidates?.[0]?.content?.parts || [];
         for (const part of candidateParts) {
             if (part.functionCall) {
+               if (config.tools === false) throw new Error('Provider requested a tool while tools are disabled');
                yield {
                  type: 'tool_call',
                  toolCall: { 

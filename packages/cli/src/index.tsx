@@ -13,7 +13,7 @@ if (args.includes('--serve') || args.includes('--server')) {
   try {
     const { provider } = loadConfig();
     const ready = provider.provider === 'ollama' || Boolean(provider.apiKey || provider.apiKeys?.length);
-    console.log(JSON.stringify({ provider: provider.provider, model: provider.model, endpoint: provider.baseUrl ? new URL(provider.baseUrl).origin : 'provider default', credentials: provider.provider === 'ollama' ? 'not required' : ready ? 'configured' : 'missing', liveConnectionTested: false }, null, 2));
+    console.log(JSON.stringify({ provider: provider.provider, model: provider.model, endpoint: provider.baseUrl ? new URL(provider.baseUrl).origin : 'provider default', toolsEnabled: provider.tools !== false, credentials: provider.provider === 'ollama' ? 'not required' : ready ? 'configured' : 'missing', liveConnectionTested: false }, null, 2));
     if (!ready) process.exitCode = 1;
   } catch (error) {
     console.error(error instanceof Error ? error.message : 'Invalid configuration');
