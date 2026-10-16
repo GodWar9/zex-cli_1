@@ -34,3 +34,14 @@ npm publish .release/sahil-zex-0.1.0.tgz --access public
 The root package is private. The tagged GitHub workflow creates a draft binary release, not an npm publication.
 
 All headless starts require a random token of at least 32 characters. Default bind is loopback; public hosting needs TLS. Budget state resets on restart. This is a single-operator tool. Pattern scanning and advisory plan mode do not sandbox shell execution.
+
+## Playwright transport verification (2026-10-16)
+
+`npm run test:e2e` starts the actual authenticated headless HTTP/WebSocket server
+with a deterministic provider registered only in the test process. Four tests cover
+authentication, malformed inputs, completed tasks, streaming and rejected socket
+upgrades. No external API key is used or charged. `npm run test:e2e:ui` opens the
+interactive runner; `npm run test:e2e:report` opens the saved HTML report. CI runs
+these checks as part of `npm run ci` and retains reports on success or failure.
+The full CI command, including isolated packed-package installation, passed locally.
+These transport checks do not establish live model quality or interactive TUI UX.
