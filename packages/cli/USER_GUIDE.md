@@ -220,3 +220,30 @@ OpenAI-compatible and Anthropic adapters buffer a complete tool batch before han
 `npm run test:tools` verifies streamed fragments, tool/result IDs, final token usage and failures. It also runs real file write/read and harmless shell operations in temporary workspaces, plus denied-execution checks, for OpenAI, Anthropic, OpenRouter and Ollama. Those SDK transports are mocked; live model/tool reliability still requires a credentialed walkthrough.
 
 Protocol references: [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling) and [Anthropic streaming](https://platform.claude.com/docs/en/build-with-claude/streaming).
+
+
+## Use a native local model server without Docker
+
+The terminal Ollama adapter can connect directly to a locally running server.
+Set `ZEX_PROVIDER=ollama` and `ZEX_MODEL` to the model installed in that server.
+No cloud key is needed. The default compatible API is
+`http://localhost:11434/v1`; set `ZEX_BASE_URL` if your loopback server uses a
+different port or API prefix.
+
+```powershell
+$env:ZEX_PROVIDER = "ollama"
+$env:ZEX_MODEL = "YOUR_INSTALLED_MODEL_ID"
+node packages/cli/dist/cli.js --doctor --local
+node packages/cli/dist/cli.js
+```
+
+Build the packages first with `npm run build:packages`. The local diagnostic
+makes one bounded, read-only GET to the server's model list. It refuses remote
+endpoints and redirects, sends no credentials or prompts, and exits nonzero for
+unreachable servers, missing models and invalid responses. It checks model
+availability, not generation quality or tool-call support. The ordinary
+`--doctor` remains a configuration-only check with no network requests.
+
+Install/start your native model server and download a suitable model separately.
+If no local model is available, `npm run demo` still runs the offline context
+pruning and scanner demonstration; it does not generate AI responses.

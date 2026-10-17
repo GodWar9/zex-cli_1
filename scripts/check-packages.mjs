@@ -50,6 +50,11 @@ for (const [config, code] of [[{ provider: 'openai', apiKey: diagnosticSecret },
   assert.ok(!(doctor.stdout + doctor.stderr).includes(diagnosticSecret));
   assert.equal(JSON.parse(doctor.stdout).liveConnectionTested, false);
 }
+writeFileSync(doctorConfig, JSON.stringify({provider:'ollama',baseUrl:'https://example.com/v1'}));
+const localDoctor = spawnSync(process.execPath, [cli, '--doctor', '--local'], {cwd:consumer,env:doctorEnv,encoding:'utf8',timeout:10_000});
+assert.equal(localDoctor.status, 1);
+assert.equal(JSON.parse(localDoctor.stdout).local.status, 'invalid_endpoint');
+assert.equal(JSON.parse(localDoctor.stdout).liveConnectionTested, false);
 writeFileSync(doctorConfig, '{invalid JSON ' + diagnosticSecret);
 const malformed = spawnSync(process.execPath, [cli, '--doctor'], { cwd: consumer, env: doctorEnv, encoding: 'utf8', timeout: 10_000 });
 assert.equal(malformed.status, 1);

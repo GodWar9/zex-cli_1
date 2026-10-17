@@ -3,7 +3,10 @@ import 'dotenv/config';
 // ─── CLI flag handling ────────────────────────────────────────────────────
 const args = process.argv.slice(2);
 
-if (args.includes('--serve') || args.includes('--server')) {
+if (args.includes('--local') && !args.includes('--doctor')) {
+  console.error('Use --local with --doctor to check a local model server.');
+  process.exitCode = 1;
+} else if (args.includes('--serve') || args.includes('--server')) {
   // Headless API server mode — no TUI required
   const { shutdown } = await import('./api/server.ts');
   process.on('SIGINT', () => { shutdown(); process.exit(0); });
@@ -13,8 +16,9 @@ if (args.includes('--serve') || args.includes('--server')) {
   try {
     const { provider } = loadConfig();
     const ready = provider.provider === 'ollama' || Boolean(provider.apiKey || provider.apiKeys?.length);
-    console.log(JSON.stringify({ provider: provider.provider, model: provider.model, endpoint: provider.baseUrl ? new URL(provider.baseUrl).origin : 'provider default', toolsEnabled: provider.tools !== false, credentials: provider.provider === 'ollama' ? 'not required' : ready ? 'configured' : 'missing', liveConnectionTested: false }, null, 2));
-    if (!ready) process.exitCode = 1;
+    const local = args.includes('--local') ? await (await import('./local-doctor.ts')).checkLocalProvider(provider) : undefined;
+    console.log(JSON.stringify({ provider: provider.provider, model: provider.model, endpoint: provider.baseUrl ? new URL(provider.baseUrl).origin : 'provider default', toolsEnabled: provider.tools !== false, credentials: provider.provider === 'ollama' ? 'not required' : ready ? 'configured' : 'missing', liveConnectionTested: local?.liveConnectionTested ?? false, ...(local ? { local } : {}) }, null, 2));
+    if (!ready || (local && local.status !== 'ready')) process.exitCode = 1;
   } catch (error) {
     console.error(error instanceof Error ? error.message : 'Invalid configuration');
     process.exitCode = 1;
@@ -30,6 +34,7 @@ Usage:
   zex                 Launch the interactive TUI
   zex --serve         Run headless API server (port: PORT or 3000)
   zex --doctor        Check terminal provider setup without exposing keys or calling APIs
+  zex --doctor --local Check local Ollama connectivity and installed model (no generation)
   zex --version, -v   Print version
   zex --help, -h      Show this help
 

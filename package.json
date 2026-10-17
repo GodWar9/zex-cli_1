@@ -26,7 +26,7 @@
     "test": "node --experimental-strip-types --test test-offline.ts",
     "test:enterprise": "node --experimental-strip-types --test test-enterprise.ts",
     "test:integration": "node --experimental-strip-types --test test-integration.ts",
-    "ci": "npm run typecheck && npm test && npm run test:providers && npm run test:config && npm run test:terminal-providers && npm run test:tools && npm run test:enterprise && npm run test:package && npm run test:e2e",
+    "ci": "npm run typecheck && npm test && npm run test:providers && npm run test:config && npm run test:local-doctor && npm run test:terminal-providers && npm run test:tools && npm run test:enterprise && npm run test:package && npm run test:e2e",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build:ci && npm run ci",
     "test:package": "node scripts/check-packages.mjs",
@@ -37,7 +37,8 @@
     "test:tools": "node --experimental-strip-types --test test-tool-streams.ts test-tool-runner.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "test:local-doctor": "node --experimental-strip-types --test test-local-doctor.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.64.0",
