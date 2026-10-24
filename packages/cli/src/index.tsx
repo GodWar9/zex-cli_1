@@ -71,8 +71,11 @@ Environment:
     exitOnCtrlC: true,
   });
 
-  await waitUntilExit();
-
-  // Leave alternate screen on exit
-  process.stdout.write('\x1b[?1049l');
+  try {
+    await waitUntilExit();
+  } finally {
+    const { disposeTerminalResources } = await import('./terminal-lifecycle.ts');
+    disposeTerminalResources();
+    process.stdout.write('\x1b[?1049l');
+  }
 }

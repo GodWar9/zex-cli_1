@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { disposeTerminalResources } from '../../terminal-lifecycle.ts';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { Box, Text, useApp, useInput } from 'ink';
@@ -120,7 +121,7 @@ export default function ChatScreen() {
     startFileWatcher(process.cwd());
     gc.startBackgroundEviction();
     return () => {
-      gc.stopBackgroundEviction();
+      disposeTerminalResources();
     };
   }, [sessionId]);
 

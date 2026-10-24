@@ -55,3 +55,5 @@ The six native checks cover version/help, offline configuration diagnosis, refus
 Both CI workflows now run the executable and archive gates after package/transport checks. Tagged releases remain drafts, and this command does not publish npm packages. A verified local Windows archive can be installed directly without a registry account; provider setup is still required for real model work. See RELEASE_INSTALL.md.
 
 In the current OneDrive checkout, cloud reparse-point test files initially produced No tests found. The two test files were materialized with identical bytes; all four transport cases then passed. No test content or discovery filter was weakened.
+
+The native terminal walkthrough also found and fixed a Ctrl+C process leak: ChatScreen stopped GC but did not close its filesystem watcher. Terminal disposal now closes both watcher and timer on unmount, and the entry point also disposes resources in a finally block while restoring the terminal screen. `test:lifecycle` verifies that a child using real watcher/timer handles exits naturally after idempotent cleanup.

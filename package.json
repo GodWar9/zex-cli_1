@@ -26,7 +26,7 @@
     "test": "node --experimental-strip-types --test test-offline.ts",
     "test:enterprise": "node --experimental-strip-types --test test-enterprise.ts",
     "test:integration": "node --experimental-strip-types --test test-integration.ts",
-    "ci": "npm run typecheck && npm test && npm run test:providers && npm run test:config && npm run test:local-doctor && npm run test:terminal-providers && npm run test:tools && npm run test:enterprise && npm run test:package && npm run test:e2e",
+    "ci": "npm run typecheck && npm test && npm run test:providers && npm run test:config && npm run test:local-doctor && npm run test:lifecycle && npm run test:terminal-providers && npm run test:tools && npm run test:enterprise && npm run test:package && npm run test:e2e",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build:ci && npm run ci",
     "test:package": "node scripts/check-packages.mjs",
@@ -41,7 +41,8 @@
     "test:local-doctor": "node --experimental-strip-types --test test-local-doctor.ts",
     "test:binary": "node scripts/check-binary.mjs",
     "release:bundle": "node scripts/bundle-release.mjs",
-    "release:prepare": "npm run ci && npm run build:ci && npm run test:binary && npm run release:bundle"
+    "release:prepare": "npm run ci && npm run build:ci && npm run test:binary && npm run release:bundle",
+    "test:lifecycle": "node --experimental-strip-types --test test-terminal-lifecycle.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.64.0",
