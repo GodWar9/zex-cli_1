@@ -45,3 +45,13 @@ interactive runner; `npm run test:e2e:report` opens the saved HTML report. CI ru
 these checks as part of `npm run ci` and retains reports on success or failure.
 The full CI command, including isolated packed-package installation, passed locally.
 These transport checks do not establish live model quality or interactive TUI UX.
+
+## Native distribution gate 24 October 2026
+
+Use `npm run release:prepare` from a clean committed checkout. It runs the complete source/package/transport suite, builds the native executable, checks that exact binary from an empty consumer directory, then creates an allowlisted release archive. The archive includes the executable, both npm tarballs, user/install guides, license, binary acceptance evidence and a manifest identifying the source commit and SHA-256 of every member. An adjacent SHA-256 file verifies the archive. The bundler extracts the archive, verifies every hash and launches the extracted executable before reporting success.
+
+The six native checks cover version/help, offline configuration diagnosis, refusal of missing/weak auth tokens, authenticated HTTP startup plus malformed requests, and WebSocket startup. They do not perform model generation. Native artifacts are platform-specific; CI checks the native executable on each OS rather than relying on cross-compilation alone.
+
+Both CI workflows now run the executable and archive gates after package/transport checks. Tagged releases remain drafts, and this command does not publish npm packages. A verified local Windows archive can be installed directly without a registry account; provider setup is still required for real model work. See RELEASE_INSTALL.md.
+
+In the current OneDrive checkout, cloud reparse-point test files initially produced No tests found. The two test files were materialized with identical bytes; all four transport cases then passed. No test content or discovery filter was weakened.

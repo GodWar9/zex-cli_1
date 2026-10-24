@@ -34,11 +34,15 @@ jobs:
             test-results/
           retention-days: 7
       - run: npm run build:ci
+      - run: npm run test:binary
+      - run: npm run release:bundle
       - uses: actions/upload-artifact@v4
         with:
           name: zex-${{ matrix.os }}-node-${{ matrix.node }}
           path: |
             dist/zex-*
             .release/*.tgz
+            .release/zex-*.tar.gz*
+            .release/zex-*.json
           include-hidden-files: true
           if-no-files-found: error

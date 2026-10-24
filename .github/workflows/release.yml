@@ -22,10 +22,16 @@ jobs:
       - run: bun install --frozen-lockfile --linker hoisted
       - run: npm run ci
       - run: npm run build:ci
+      - run: npm run test:binary
+      - run: npm run release:bundle
       - uses: actions/upload-artifact@v4
         with:
           name: zex-${{ matrix.os }}
-          path: dist/zex-*
+          path: |
+            dist/zex-*
+            .release/zex-*.tar.gz*
+            .release/zex-*.json
+          include-hidden-files: true
           if-no-files-found: error
   draft:
     runs-on: ubuntu-latest

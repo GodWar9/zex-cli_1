@@ -71,3 +71,7 @@ Verified code and interview walkthrough: [release evidence](RELEASE_EVIDENCE.md)
 Read the [user guide](packages/cli/USER_GUIDE.md) for API-key setup, provider capabilities, configuration precedence, server usage and troubleshooting.
 
 Terminal tool calls are implemented for Gemini, OpenAI, Anthropic and the OpenAI-compatible adapters (OpenRouter, Ollama and custom endpoints). Select a model with function-calling support; use `"tools": false` for text-only models. See the user guide for execution boundaries and verification limits.
+
+## Prepare a native distribution
+
+From a clean committed checkout, run `npm run release:prepare`. The complete gate produces `.release/zex-0.1.0-<platform>-<arch>.tar.gz`, an archive checksum and a source/file manifest. It tests the compiled executable and an extracted consumer copy, not just the TypeScript source. Read [release installation](RELEASE_INSTALL.md) for standalone or tarball installation and headless operation. Registry publication and live model-provider access remain separate gates.
