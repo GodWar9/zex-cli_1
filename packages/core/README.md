@@ -1,7 +1,5 @@
 # @sahil/zex-core
 
-> Release status (2026-10-08): scoped packages are prepared and locally tested, but not yet published. Registry installation commands below apply after publication.
-
 Core orchestration library for [zex](https://github.com/GodWar9/zex-cli_1) — agent
 orchestration, LLM provider adapters, multi-key pooling, budget management, and
 security scanning. Framework-agnostic; the `zex` CLI is one consumer of it.

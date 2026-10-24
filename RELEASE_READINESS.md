@@ -57,3 +57,9 @@ Both CI workflows now run the executable and archive gates after package/transpo
 In the current OneDrive checkout, cloud reparse-point test files initially produced No tests found. The two test files were materialized with identical bytes; all four transport cases then passed. No test content or discovery filter was weakened.
 
 The native terminal walkthrough also found and fixed a Ctrl+C process leak: ChatScreen stopped GC but did not close its filesystem watcher. Terminal disposal now closes both watcher and timer on unmount, and the entry point also disposes resources in a finally block while restoring the terminal screen. `test:lifecycle` verifies that a child using real watcher/timer handles exits naturally after idempotent cleanup.
+
+## npm publication path 24 October 2026
+
+The npm packages and native executable are both supported distribution formats. NPM_RELEASE.md documents publication of the exact acceptance-tested tarballs, core-first ordering, checksum verification, interrupted-publish recovery, and fresh public-registry checks of npx, global installation, the zex command and the library import. The package test now exercises the npm command shim as well as the compiled CLI entry point. No provider credentials are needed for these checks.
+
+At preparation time npm authentication is pending. A successful dry-run is not publication. Publication and fresh-install evidence are recorded separately in `.release/npm-publication.json` and `.release/registry-check.json` when those operations succeed.

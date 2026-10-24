@@ -2,7 +2,7 @@
 
 Zex accepts your own model-provider keys. The terminal reads credentials on your computer; the headless server reads credentials configured on that server. No Zex account is required.
 
-**Pre-release:** npm packages are not published yet. Source installation works now; registry commands below apply after publication. Offline test success does not certify live provider availability.
+Zex supports npm installation, source builds and standalone executables. Offline test success does not certify live provider availability.
 
 ## Install
 

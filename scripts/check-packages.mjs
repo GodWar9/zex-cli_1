@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
-import { copyFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { createHash, randomBytes } from 'node:crypto';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -12,6 +12,9 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const npm = process.env.npm_execpath;
 assert.ok(npm, 'Run this check through npm run test:package');
 mkdirSync(join(root, '.release'), { recursive: true });
+const evidencePath = join(root, '.release', 'npm-packages.json');
+rmSync(evidencePath, { force: true });
+const packages = ['core', 'cli'].map(directory => JSON.parse(readFileSync(join(root, 'packages', directory, 'package.json'), 'utf8')));
 const workspace = mkdtempSync(join(tmpdir(), 'zex-package-check-'));
 const consumer = join(workspace, 'consumer');
 mkdirSync(consumer);
@@ -22,22 +25,25 @@ function run(args, cwd = root) {
 }
 run([npm, 'run', 'build:packages']);
 const tarballs = [];
-for (const name of ['@sahil/zex-core', '@sahil/zex']) {
+const artifacts = [];
+for (const { name, version } of packages) {
   const [pack] = JSON.parse(run([npm, 'pack', '--ignore-scripts', '--json', '--workspace', name, '--pack-destination', workspace]));
   assert.equal(pack.name, name);
   assert.ok(pack.files.some((file) => file.path === 'LICENSE'));
-  if (name === '@sahil/zex') assert.ok(pack.files.some(file => file.path === 'USER_GUIDE.md'));
+  if (name === packages[1].name) assert.ok(pack.files.some(file => file.path === 'USER_GUIDE.md'));
   assert.ok(pack.files.some((file) => file.path === (name.endsWith('core') ? 'dist/index.js' : 'dist/cli.js')));
   assert.ok(!pack.files.some((file) => /(^|\/)(\.env(?:\.|$)|node_modules|tests?)(\/|$)/.test(file.path)));
   tarballs.push(join(workspace, pack.filename));
   copyFileSync(join(workspace, pack.filename), join(root, '.release', pack.filename));
+  artifacts.push({ name, version, filename: pack.filename, integrity: pack.integrity, sha256: createHash('sha256').update(readFileSync(join(workspace, pack.filename))).digest('hex') });
 }
 writeFileSync(join(consumer, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
 run([npm, 'install', '--ignore-scripts', '--omit=dev', '--no-audit', '--no-fund', ...tarballs], consumer);
-run(['--input-type=module', '-e', "import { ZexOrchestrator } from '@sahil/zex-core'; if(typeof ZexOrchestrator !== 'function') process.exit(1)"], consumer);
-const cli = join(consumer, 'node_modules', '@sahil', 'zex', 'dist', 'cli.js');
+run(['--input-type=module', '-e', `import { ZexOrchestrator } from ${JSON.stringify(packages[0].name)}; if(typeof ZexOrchestrator !== 'function') process.exit(1)`], consumer);
+const cli = join(consumer, 'node_modules', ...packages[1].name.split('/'), 'dist', 'cli.js');
 assert.match(run([cli, '--version'], consumer), /zex v\d+\.\d+\.\d+/);
 assert.match(run([cli, '--help'], consumer), /Usage:/);
+assert.equal(run([npm, 'exec', '--offline', '--', 'zex', '--version'], consumer).trim(), `zex v${packages[1].version}`);
 
 const doctorConfig = join(consumer, 'doctor-config.json');
 const doctorEnv = { ...process.env, ZEX_CONFIG_FILE: doctorConfig };
@@ -106,4 +112,5 @@ for (const override of [{ ZEX_HOST: '127.0.0.1', ZEX_AUTH_TOKEN: '' }, { ZEX_AUT
   assert.match(result.stderr, /ZEX_AUTH_TOKEN is required|Invalid PORT|Invalid DAILY_BUDGET_USD/);
 }
 console.log(`PASS: packed library import, CLI help/version, HTTP auth and public-bind protection (Node ${process.versions.node})`);
+writeFileSync(evidencePath, JSON.stringify({ schemaVersion: 1, checkedAt: new Date().toISOString(), node: process.versions.node, packages: artifacts }, null, 2) + '\n');
 console.log(`Artifacts: ${workspace}`);

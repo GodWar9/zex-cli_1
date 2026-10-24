@@ -1,8 +1,8 @@
 # @sahil/zex
 
-Terminal coding assistant and authenticated headless API. Pre-release: not yet published.
+Terminal coding assistant and authenticated headless API. Zex also supports standalone executables with an embedded runtime.
 
-After publication: `npm install -g @sahil/zex` or `npx @sahil/zex`. Requires Node.js 24.12+. Bun is only needed to build from source.
+Install with `npm install -g @sahil/zex`, then run `zex` inside your project. For a one-off run, use `npx @sahil/zex`. Requires Node.js 24.12+. Bun is only needed to build from source.
 
 ```text
 zex                 Interactive terminal UI

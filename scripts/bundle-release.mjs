@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,16 +11,18 @@ function git(args) {
   assert.equal(result.status, 0, 'Git release identity is unavailable'); return result.stdout.trim();
 }
 assert.equal(git(['status', '--porcelain', '--untracked-files=normal']), '', 'Commit source changes before preparing a release');
-const version = JSON.parse(readFileSync(join(root, 'packages/cli/package.json'), 'utf8')).version;
-const coreVersion = JSON.parse(readFileSync(join(root, 'packages/core/package.json'), 'utf8')).version;
+const cliPackage = JSON.parse(readFileSync(join(root, 'packages/cli/package.json'), 'utf8'));
+const corePackage = JSON.parse(readFileSync(join(root, 'packages/core/package.json'), 'utf8'));
+const version = cliPackage.version;
+const packageFilename = pkg => `${pkg.name.replace('@', '').replace('/', '-')}-${pkg.version}.tgz`;
 const name = `zex-${version}-${process.platform}-${process.arch}`;
 const release = join(root, '.release'); mkdirSync(release, { recursive: true });
 const stage = mkdtempSync(join(release, 'bundle-'));
 const binaryName = `zex-${process.platform}-${process.arch}${process.platform === 'win32' ? '.exe' : ''}`;
 const files = [
   ['dist/' + binaryName, binaryName],
-  [`.release/sahil-zex-core-${coreVersion}.tgz`, `sahil-zex-core-${coreVersion}.tgz`],
-  [`.release/sahil-zex-${version}.tgz`, `sahil-zex-${version}.tgz`],
+  [`.release/${packageFilename(corePackage)}`, packageFilename(corePackage)],
+  [`.release/${packageFilename(cliPackage)}`, packageFilename(cliPackage)],
   ['packages/cli/USER_GUIDE.md', 'USER_GUIDE.md'],
   ['LICENSE', 'LICENSE'],
   ['RELEASE_INSTALL.md', 'README.md'],
@@ -36,7 +38,13 @@ for (const [source, destination] of files) {
 const binaryCheck = JSON.parse(readFileSync(join(stage, 'binary-check.json'), 'utf8'));
 assert.equal(binaryCheck.sha256, entries.find(entry => entry.file === binaryName).sha256, 'The binary changed after acceptance checks; rerun test:binary');
 assert.equal(binaryCheck.version, version);
-const manifest = { schemaVersion: 1, version, sourceCommit: git(['rev-parse', 'HEAD']), platform: process.platform, arch: process.arch, createdAt: new Date().toISOString(), distribution: 'standalone executable and local npm tarballs', registryPublished: false, providerGenerationTested: false, files: entries };
+const receiptPath = join(release, 'npm-publication.json');
+const receipt = existsSync(receiptPath) ? JSON.parse(readFileSync(receiptPath, 'utf8')) : null;
+const registryPublished = receipt?.published === true && [corePackage, cliPackage].every(pkg => {
+  const artifact = receipt.packages?.find(entry => entry.name === pkg.name && entry.version === pkg.version);
+  return artifact && artifact.sha256 === entries.find(entry => entry.file === packageFilename(pkg)).sha256;
+});
+const manifest = { schemaVersion: 1, version, sourceCommit: git(['rev-parse', 'HEAD']), platform: process.platform, arch: process.arch, createdAt: new Date().toISOString(), distribution: 'standalone executable and npm tarballs', registryPublished, providerGenerationTested: false, files: entries };
 writeFileSync(join(stage, 'release-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 const members = [...entries.map(entry => entry.file), 'release-manifest.json'];
 const archive = join(release, name + '.tar.gz');
